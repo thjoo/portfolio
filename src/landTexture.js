@@ -8,7 +8,7 @@ import cities from "./data/cities.json";
 // R = Küste leicht weich (für die wackelige Küstenlinie im Shader)
 // G = stark weichgezeichnet (für den dunklen Pigmentrand)
 // B = Stadtlichter aus echten Städten (GeoNames, ab 20'000 Einwohnern)
-// A = Eis: 0.5 an der Meereis-Kante im Winter, 1.0 rund 10° weiter polwärts (für Sommer/Winter-Regler)
+// A = Eis: 0.5 an der Winterkante, 0.92 an der Sommerkante des Meereises (für die Jahreszeiten-Regler)
 export function createLandTexture(width = 4096) {
   const height = width / 2;
   const land = feature(land50, land50.objects.land);
@@ -113,16 +113,26 @@ function drawCityLights(width, height) {
   return ctx.getImageData(0, 0, width, height).data;
 }
 
-// Ungefähre Kante des Meereises beim Wintermaximum (Arktis März, Antarktis September), [Länge, Breite].
-// Quellen: NSIDC / NASA Earth Observatory. Bewusst vereinfacht, die Kante wird im Shader noch gemalt.
-const ARCTIC_EDGE = [
+// Ungefähre Kanten des Meereises, [Länge, Breite]. Quellen: NSIDC / NASA Earth Observatory.
+// Winter = Maximum (Arktis März, Antarktis September), Sommer = Minimum (Arktis September, Antarktis Februar).
+// Bewusst vereinfacht, die Kante wird im Shader noch unregelmässig gemalt.
+const ARCTIC_WINTER = [
   [-180, 60], [-170, 58], [-160, 57], [-150, 59], [-140, 70], [-120, 68], [-100, 52], [-80, 52],
   [-70, 55], [-60, 50], [-50, 55], [-45, 60], [-30, 65], [-20, 67], [-10, 72], [0, 75], [20, 76],
   [40, 70], [50, 68], [60, 66], [140, 62], [143, 46], [155, 47], [160, 56], [170, 60], [180, 60],
 ];
-const ANTARCTIC_EDGE = [
-  [-180, -62], [-150, -62], [-120, -63], [-90, -63], [-70, -61], [-50, -58], [-30, -56], [0, -55],
-  [20, -55], [40, -57], [60, -58], [90, -61], [120, -63], [150, -63], [180, -62],
+const ARCTIC_SUMMER = [
+  [-180, 75], [-160, 74], [-140, 73], [-110, 72], [-90, 74], [-75, 77], [-65, 80], [-40, 81],
+  [-20, 78], [0, 81], [20, 82], [60, 82], [90, 80], [120, 78], [140, 76], [160, 76], [180, 75],
+];
+const ANTARCTIC_WINTER = [
+  [-180, -61], [-160, -63], [-130, -65], [-100, -66], [-80, -63], [-60, -60], [-45, -58],
+  [-25, -56], [0, -55], [20, -55], [35, -57], [60, -60], [80, -62], [100, -63], [120, -63],
+  [150, -64], [170, -62], [180, -61],
+];
+const ANTARCTIC_SUMMER = [
+  [-180, -74], [-150, -73], [-120, -71], [-90, -70], [-70, -67], [-50, -63], [-30, -70],
+  [0, -69], [30, -68], [60, -66], [90, -64], [120, -65], [150, -66], [180, -74],
 ];
 
 function edgeAt(table, lon) {
@@ -138,13 +148,17 @@ function isGreenland(lon, lat) {
   return (lat > 60 && lat < 75 && lon > -55 && lon < -15) || (lat >= 75 && lon > -70 && lon < -12);
 }
 
+// A-Kanal: 0.5 an der Winterkante, 0.92 an der Sommerkante (pro Längengrad).
+// Der Regler im Shader schiebt die Schwelle dazwischen hin und her.
 function computeIce(width, height, landData) {
   const ice = new Uint8Array(width * height);
-  const span = 20;
+  const SUMMER = 0.92;
   for (let x = 0; x < width; x++) {
     const lon = (x / width) * 360 - 180;
-    const north = edgeAt(ARCTIC_EDGE, lon);
-    const south = edgeAt(ANTARCTIC_EDGE, lon);
+    const northWinter = edgeAt(ARCTIC_WINTER, lon);
+    const northSummer = Math.max(edgeAt(ARCTIC_SUMMER, lon), northWinter + 1);
+    const southWinter = edgeAt(ANTARCTIC_WINTER, lon);
+    const southSummer = Math.min(edgeAt(ANTARCTIC_SUMMER, lon), southWinter - 1);
     for (let y = 0; y < height; y++) {
       const lat = 90 - (y / height) * 180;
       const i = y * width + x;
@@ -154,9 +168,9 @@ function computeIce(width, height, landData) {
         // Landeis nur auf Grönland und der Antarktis
         if (isGreenland(lon, lat) || lat < -60) value = 1;
       } else if (lat > 0) {
-        value = 0.5 + (lat - north) / span;
+        value = 0.5 + ((lat - northWinter) / (northSummer - northWinter)) * (SUMMER - 0.5);
       } else {
-        value = 0.5 + (south - lat) / span;
+        value = 0.5 + ((southWinter - lat) / (southWinter - southSummer)) * (SUMMER - 0.5);
       }
       ice[i] = Math.round(Math.min(Math.max(value, 0), 1) * 255);
     }

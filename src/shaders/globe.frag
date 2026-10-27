@@ -16,7 +16,9 @@ uniform float uCoastWobble;
 uniform float uPigment;
 uniform float uEdgeDarkening;
 uniform float uGranulation;
-uniform float uIceAmount;
+uniform float uIceNorth;
+uniform float uIceSouth;
+uniform float uIceIrregular;
 uniform float uIceCoast;
 uniform float uIceSoftness;
 uniform float uCityDensity;
@@ -66,11 +68,14 @@ void main() {
 
   vec3 color = mix(ocean, ground, land);
 
-  // Eis aus der Textur (A-Kanal): Regler 0 = Sommerminimum, 1 = Wintermaximum
-  float iceThreshold = mix(0.92, 0.5, uIceAmount);
-  // Weicher, ausfransender Rand zum Wasser: breiter Übergang plus Pigment-Noise
-  float iceEdgeNoise = wobble * 0.06 + fbm(p * 14.0 + 2.0) * 0.04 * uIceSoftness * 10.0;
-  float iceMask = smoothstep(iceThreshold - uIceSoftness, iceThreshold + uIceSoftness, landTex.a + iceEdgeNoise);
+  // Eis aus der Textur (A-Kanal), je Halbkugel eigene Jahreszeit: 0 = Sommer, 1 = Winter
+  float season = p.y > 0.0 ? uIceNorth : uIceSouth;
+  float iceThreshold = mix(0.92, 0.5, season);
+  // Weicher, ausfransender Rand zum Wasser, dazu grosse Lappen und Buchten statt eines Kreises
+  float iceLobes = (fbm(p * 2.2 + 8.0) * 0.14 + fbm(p * 5.5 + 3.0) * 0.06) * uIceIrregular;
+  float iceEdgeNoise = iceLobes + wobble * 0.06 + fbm(p * 14.0 + 2.0) * 0.04 * uIceSoftness * 10.0;
+  float seaIceValue = landTex.a + iceEdgeNoise * step(landTex.a, 0.99);
+  float iceMask = smoothstep(iceThreshold - uIceSoftness, iceThreshold + uIceSoftness, seaIceValue);
   // Landeis hell, Meereis etwas dunkler und bläulicher -> die Küste bleibt unter dem Eis lesbar
   // Übergang Landeis -> Meereis über die weiche Landmaske, damit die Farbe ineinander verläuft
   float landIce = smoothstep(0.05, 0.95, mix(land, landSoft, clamp(uIceSoftness * 10.0, 0.0, 1.0)));
