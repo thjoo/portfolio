@@ -41,6 +41,7 @@ export default function Globe() {
       uIceSoftness: { value: 0 },
       uScribble: { value: 0 },
       uScribbleDensity: { value: 1 },
+      uScribbleWidth: { value: 1.6 },
       uIceFill: { value: 0 },
       uCityDensity: { value: 0 },
       uSpecular: { value: 0 },
@@ -80,7 +81,8 @@ export default function Globe() {
       iceCoast: { value: 0.35, min: 0, max: 1, label: "Küste im Eis" },
       iceSoftness: { value: 0.14, min: 0.005, max: 0.3, label: "Eis-Übergang weich" },
       scribble: { value: 1, min: 0, max: 1, label: "Gekritzel" },
-      scribbleDensity: { value: 2.0, min: 0.4, max: 4, label: "Gekritzel dicht" },
+      scribbleDensity: { value: 0.6, min: 0.2, max: 3, label: "Gekritzel dicht" },
+      scribbleWidth: { value: 1.6, min: 0.5, max: 5, label: "Strichbreite (px)" },
       iceFill: { value: 0.4, min: 0, max: 1, label: "Meereis Grundfarbe" },
       cityDensity: { value: 1, min: 0, max: 1.5, label: "Stadtlichter" },
       rotationSpeed: { value: 0.015, min: 0, max: 0.3, label: "Rotation" },
@@ -116,6 +118,7 @@ export default function Globe() {
     u.uIceSoftness.value = c.iceSoftness;
     u.uScribble.value = c.scribble;
     u.uScribbleDensity.value = c.scribbleDensity;
+    u.uScribbleWidth.value = c.scribbleWidth;
     u.uIceFill.value = c.iceFill;
     u.uCityDensity.value = c.cityDensity;
     u.uSpecular.value = c.specular;

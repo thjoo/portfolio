@@ -37,6 +37,7 @@ const fragmentShader = /* glsl */ `
   uniform float uScribble;
   uniform float uScribbleDensity;
   uniform float uIceCoast;
+  uniform float uScribbleWidth;
   uniform vec3 uIceColor;
   uniform vec3 uSunDirection;
 
@@ -83,10 +84,10 @@ const fragmentShader = /* glsl */ `
       if (iceMask > 0.001) {
         float sun = dot(normalize(world.xyz), normalize(uSunDirection));
         float light = 0.85 + 0.25 * smoothstep(-0.2, 0.2, sun);
-        float pressure = iceScribble(local, iceMask, uScribbleDensity);
+        float pressure = iceScribble(local, iceMask, uScribbleDensity, uScribbleWidth);
         // Auf dem Landeis weniger Druck, damit die Küste (z. B. der Antarktis) lesbar bleibt
         float landIce = smoothstep(0.3, 0.7, landTexel.r);
-        pressure *= mix(1.0, 0.62, landIce);
+        pressure *= mix(1.0, 0.4, landIce);
         // Papierzahn für die Kreide, direkt auf der Kugel
         float tooth = crayonTooth(local, uEarthScale * 0.7);
         float scribble = crayonDeposit(pressure, tooth);
@@ -136,6 +137,7 @@ export class PaperEffect extends Effect {
               ["uScribble", new Uniform(0)],
               ["uScribbleDensity", new Uniform(1)],
               ["uIceCoast", new Uniform(0)],
+              ["uScribbleWidth", new Uniform(1.6)],
               ["uIceColor", new Uniform(new Color())],
               ["uSunDirection", new Uniform(new Vector3(0, 0, 1))],
             ]
