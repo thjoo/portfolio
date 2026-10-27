@@ -21,6 +21,7 @@ uniform float uIceSouth;
 uniform float uIceIrregular;
 uniform float uIceCoast;
 uniform float uIceSoftness;
+uniform float uIceFill;
 uniform float uCityDensity;
 uniform float uSpecular;
 uniform float uFresnel;
@@ -32,6 +33,7 @@ varying vec3 vNormalW;
 varying vec3 vViewDir;
 
 #include ./noise.glsl
+#include ./ice.glsl
 
 void main() {
   // Rauschen auf der Kugeloberfläche (Objektraum -> keine UV-Naht)
@@ -68,19 +70,18 @@ void main() {
 
   vec3 color = mix(ocean, ground, land);
 
-  // Eis aus der Textur (A-Kanal), je Halbkugel eigene Jahreszeit: 0 = Sommer, 1 = Winter
-  float season = p.y > 0.0 ? uIceNorth : uIceSouth;
-  float iceThreshold = mix(0.92, 0.5, season);
-  // Weicher, ausfransender Rand zum Wasser, dazu grosse Lappen und Buchten statt eines Kreises
-  float iceLobes = (fbm(p * 2.2 + 8.0) * 0.14 + fbm(p * 5.5 + 3.0) * 0.06) * uIceIrregular;
-  float iceEdgeNoise = iceLobes + wobble * 0.06 + fbm(p * 14.0 + 2.0) * 0.04 * uIceSoftness * 10.0;
-  float seaIceValue = landTex.a + iceEdgeNoise * step(landTex.a, 0.99);
-  float iceMask = smoothstep(iceThreshold - uIceSoftness, iceThreshold + uIceSoftness, seaIceValue);
+  // Eis aus der Textur (A-Kanal), je Halbkugel eigene Jahreszeit
+  float iceMask = iceCoverage(p, landTex.a, uIceNorth, uIceSouth, uIceIrregular, uIceSoftness);
   // Landeis hell, Meereis etwas dunkler und bläulicher -> die Küste bleibt unter dem Eis lesbar
   // Übergang Landeis -> Meereis über die weiche Landmaske, damit die Farbe ineinander verläuft
   float landIce = smoothstep(0.05, 0.95, mix(land, landSoft, clamp(uIceSoftness * 10.0, 0.0, 1.0)));
-  vec3 iceColor = mix(uSeaIce, uIce, landIce) * (0.85 + 0.25 * day);
-  color = mix(color, iceColor, iceMask);
+  float light = 0.85 + 0.25 * day;
+
+  // Blasse Grundfläche unter den Strichen: auf dem Meer kaum, auf Landeis deutlicher
+  vec3 iceBase = mix(uSeaIce, uIce, landIce);
+  color = mix(color, iceBase * light, iceMask * mix(uIceFill, 0.7, landIce));
+
+  // Das Gekritzel darüber zeichnet der Papier-Pass nach Kuwahara (sonst würde es weggeglättet)
 
   // Feine Pigment-Kontur entlang der Küste, nur im Eis (Antarktis, Grönland)
   float coastLine = 1.0 - smoothstep(0.0, 0.18, abs(landTex.r - 0.5 + wobble * 0.03));

@@ -6,8 +6,11 @@ import { createLandTexture } from "./landTexture.js";
 import vertexShader from "./shaders/globe.vert?raw";
 import fragmentSource from "./shaders/globe.frag?raw";
 import noise from "./shaders/noise.glsl?raw";
+import ice from "./shaders/ice.glsl?raw";
 
-const fragmentShader = fragmentSource.replace("#include ./noise.glsl", noise);
+const fragmentShader = fragmentSource
+  .replace("#include ./noise.glsl", noise)
+  .replace("#include ./ice.glsl", ice);
 
 export default function Globe() {
   const mesh = useRef();
@@ -36,6 +39,9 @@ export default function Globe() {
       uIceIrregular: { value: 0 },
       uIceCoast: { value: 0 },
       uIceSoftness: { value: 0 },
+      uScribble: { value: 0 },
+      uScribbleDensity: { value: 1 },
+      uIceFill: { value: 0 },
       uCityDensity: { value: 0 },
       uSpecular: { value: 0 },
       uFresnel: { value: 0 },
@@ -73,6 +79,9 @@ export default function Globe() {
       iceIrregular: { value: 1, min: 0, max: 2, label: "Eiskante unregelmässig" },
       iceCoast: { value: 0.2, min: 0, max: 1, label: "Küste im Eis" },
       iceSoftness: { value: 0.14, min: 0.005, max: 0.3, label: "Eis-Übergang weich" },
+      scribble: { value: 0.9, min: 0, max: 1, label: "Gekritzel" },
+      scribbleDensity: { value: 1, min: 0.4, max: 2.5, label: "Gekritzel dicht" },
+      iceFill: { value: 0.2, min: 0, max: 1, label: "Meereis Grundfarbe" },
       cityDensity: { value: 1, min: 0, max: 1.5, label: "Stadtlichter" },
       rotationSpeed: { value: 0.015, min: 0, max: 0.3, label: "Rotation" },
     }),
@@ -105,6 +114,9 @@ export default function Globe() {
     u.uIceIrregular.value = c.iceIrregular;
     u.uIceCoast.value = c.iceCoast;
     u.uIceSoftness.value = c.iceSoftness;
+    u.uScribble.value = c.scribble;
+    u.uScribbleDensity.value = c.scribbleDensity;
+    u.uIceFill.value = c.iceFill;
     u.uCityDensity.value = c.cityDensity;
     u.uSpecular.value = c.specular;
     u.uFresnel.value = c.fresnel;

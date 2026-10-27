@@ -68,7 +68,20 @@ function Post() {
     u.get("uInverseProjection").value.copy(camera.projectionMatrixInverse);
     u.get("uCameraWorld").value.copy(camera.matrixWorld);
     const globe = scene.getObjectByName("globe");
-    if (globe) u.get("uGlobeInverse").value.copy(globe.matrixWorld).invert();
+    if (globe) {
+      u.get("uGlobeInverse").value.copy(globe.matrixWorld).invert();
+      // Eis-Einstellungen der Erde übernehmen, damit Grundfläche und Gekritzel zusammenpassen
+      const g = globe.material.uniforms;
+      u.get("uLand").value = g.uLand.value;
+      u.get("uIceNorth").value = g.uIceNorth.value;
+      u.get("uIceSouth").value = g.uIceSouth.value;
+      u.get("uIceIrregular").value = g.uIceIrregular.value;
+      u.get("uIceSoftness").value = g.uIceSoftness.value;
+      u.get("uScribble").value = g.uScribble.value;
+      u.get("uScribbleDensity").value = g.uScribbleDensity.value;
+      u.get("uIceColor").value.copy(g.uIce.value);
+      u.get("uSunDirection").value.copy(g.uSunDirection.value);
+    }
   });
 
   return (

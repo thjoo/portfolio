@@ -1,12 +1,15 @@
 import { Effect, EffectAttribute } from "postprocessing";
-import { Matrix4, Uniform } from "three";
+import { Color, Matrix4, Uniform, Vector3 } from "three";
 import paper from "./shaders/paper.glsl?raw";
+import noise from "./shaders/noise.glsl?raw";
+import ice from "./shaders/ice.glsl?raw";
 
 // Letzter Pass, nach Kuwahara, damit die feine Papierstruktur nicht weggeglättet wird.
 // Über den Tiefenpuffer wird unterschieden: Erde (Tiefe < 1) oder Hintergrund (Tiefe = 1).
 // Beide bekommen ihr eigenes Papier.
 // Für "dreht mit" wird aus Tiefe + Kamera der Punkt auf der Kugel im Objektraum der Erde
 // zurückgerechnet: das Papier klebt dann an der Oberfläche und dreht sich mit.
+// Derselbe Punkt dient für das Gekritzel im Eis, das hier nach Kuwahara scharf bleibt.
 const fragmentShader = /* glsl */ `
   uniform float uDistortion;
   uniform float uAspect;
@@ -26,8 +29,20 @@ const fragmentShader = /* glsl */ `
   uniform mat4 uCameraWorld;
   uniform mat4 uGlobeInverse;
 
+  uniform sampler2D uLand;
+  uniform float uIceNorth;
+  uniform float uIceSouth;
+  uniform float uIceIrregular;
+  uniform float uIceSoftness;
+  uniform float uScribble;
+  uniform float uScribbleDensity;
+  uniform vec3 uIceColor;
+  uniform vec3 uSunDirection;
+
 
   ${paper}
+  ${noise}
+  ${ice}
 
   // Papier triplanar auf die Kugel projizieren (keine Naht, keine verzerrten Pole)
   float sphericalPaper(vec3 pos, float scale, float fibers, float tooth, float grain) {
@@ -51,11 +66,28 @@ const fragmentShader = /* glsl */ `
     float isEarth = step(depth, 0.9999);
 
     float bg = paperHeight(p, uBgScale, uBgFibers, uBgTooth, uBgGrain);
-    float earth;
-    if (uEarthFollow > 0.5 && isEarth > 0.5) {
+    vec3 color = inputColor.rgb;
+    vec3 local = vec3(0.0);
+    if (isEarth > 0.5) {
       vec4 view = uInverseProjection * vec4(vec3(uv, depth) * 2.0 - 1.0, 1.0);
       vec4 world = uCameraWorld * vec4(view.xyz / view.w, 1.0);
-      vec3 local = (uGlobeInverse * world).xyz;
+      local = normalize((uGlobeInverse * world).xyz);
+
+      // Gekritzel im Eis. UV wie bei SphereGeometry: u = atan(z, -x) / 2pi, v = 1 - acos(y) / pi
+      vec2 sphereUv = vec2(atan(local.z, -local.x) / 6.28318530718, 1.0 - acos(clamp(local.y, -1.0, 1.0)) / 3.14159265359);
+      sphereUv.x = fract(sphereUv.x);
+      float iceValue = texture2D(uLand, sphereUv).a;
+      float iceMask = iceCoverage(local, iceValue, uIceNorth, uIceSouth, uIceIrregular, uIceSoftness);
+      if (iceMask > 0.001) {
+        float sun = dot(normalize(world.xyz), normalize(uSunDirection));
+        float light = 0.85 + 0.25 * smoothstep(-0.2, 0.2, sun);
+        float scribble = iceScribble(local, iceMask, uScribbleDensity);
+        color = mix(color, uIceColor * light * 1.05, clamp(scribble * uScribble, 0.0, 1.0));
+      }
+    }
+
+    float earth;
+    if (uEarthFollow > 0.5 && isEarth > 0.5) {
       earth = sphericalPaper(local, uEarthScale, uEarthFibers, uEarthTooth, uEarthGrain);
     } else {
       earth = paperHeight(p, uEarthScale, uEarthFibers, uEarthTooth, uEarthGrain);
@@ -64,7 +96,7 @@ const fragmentShader = /* glsl */ `
     earth = earth < 0.0 ? earth * uEarthPooling : earth * (2.0 - uEarthPooling) * 0.5;
 
     float h = mix(bg, earth, isEarth);
-    outputColor = vec4(inputColor.rgb * (1.0 + h), inputColor.a);
+    outputColor = vec4(color * (1.0 + h), inputColor.a);
   }
 `;
 
@@ -83,7 +115,18 @@ export class PaperEffect extends Effect {
             ["uInverseProjection", "uCameraWorld", "uGlobeInverse"].map((name) => [
               name,
               new Uniform(new Matrix4()),
-            ])
+            ]),
+            [
+              ["uLand", new Uniform(null)],
+              ["uIceNorth", new Uniform(0)],
+              ["uIceSouth", new Uniform(0)],
+              ["uIceIrregular", new Uniform(0)],
+              ["uIceSoftness", new Uniform(0.1)],
+              ["uScribble", new Uniform(0)],
+              ["uScribbleDensity", new Uniform(1)],
+              ["uIceColor", new Uniform(new Color())],
+              ["uSunDirection", new Uniform(new Vector3(0, 0, 1))],
+            ]
           )
       ),
     });
