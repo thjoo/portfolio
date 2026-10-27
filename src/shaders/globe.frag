@@ -20,6 +20,7 @@ uniform float uCityDensity;
 uniform float uSpecular;
 uniform float uFresnel;
 
+
 varying vec2 vUv;
 varying vec3 vPosition;
 varying vec3 vNormalW;

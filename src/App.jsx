@@ -6,6 +6,7 @@ import { EffectComposer, Kuwahara } from "@react-three/postprocessing";
 import { Leva, useControls } from "leva";
 import Globe from "./Globe.jsx";
 import Stars from "./Stars.jsx";
+import Background from "./Background.jsx";
 import { PaperEffect } from "./PaperEffect.js";
 
 // Kamera-Abstand so wählen, dass die Kugel auch im Hochformat ganz sichtbar bleibt
@@ -29,20 +30,37 @@ function Post() {
     kuwahara: { value: true, label: "Kuwahara an" },
     radius: { value: 4, min: 1, max: 12, step: 1, label: "Pinsel-Radius" },
     sectors: { value: 8, min: 2, max: 8, step: 1, label: "Sektoren" },
-    paper: { value: true, label: "Papier an" },
     distortion: { value: 0.003, min: 0, max: 0.02, label: "Verzerrung" },
-    fibers: { value: 0.12, min: 0, max: 0.4, label: "Papierfasern" },
-    grain: { value: 0.06, min: 0, max: 0.3, label: "Korn" },
-    vignette: { value: 0.25, min: 0, max: 1, label: "Vignette" },
+  });
+
+  const bg = useControls("Papier Hintergrund", {
+    scale: { value: 1, min: 0.3, max: 4, label: "Grösse" },
+    fibers: { value: 0.14, min: 0, max: 0.5, label: "Fasern" },
+    tooth: { value: 0.08, min: 0, max: 0.5, label: "Zahn" },
+    grain: { value: 0.05, min: 0, max: 0.3, label: "Korn" },
+  });
+
+  const earth = useControls("Papier Erde", {
+    scale: { value: 1.6, min: 0.3, max: 4, label: "Grösse" },
+    fibers: { value: 0.08, min: 0, max: 0.5, label: "Fasern" },
+    tooth: { value: 0.2, min: 0, max: 0.5, label: "Zahn" },
+    grain: { value: 0.04, min: 0, max: 0.3, label: "Korn" },
+    pooling: { value: 1.5, min: 1, max: 2, label: "Pigment in Tälern" },
   });
 
   useFrame(() => {
     const u = paper.uniforms;
-    u.get("uDistortion").value = p.paper ? p.distortion : 0;
-    u.get("uFibers").value = p.paper ? p.fibers : 0;
-    u.get("uGrain").value = p.paper ? p.grain : 0;
-    u.get("uVignette").value = p.paper ? p.vignette : 0;
+    u.get("uDistortion").value = p.distortion;
     u.get("uAspect").value = size.width / size.height;
+    u.get("uBgScale").value = bg.scale;
+    u.get("uBgFibers").value = bg.fibers;
+    u.get("uBgTooth").value = bg.tooth;
+    u.get("uBgGrain").value = bg.grain;
+    u.get("uEarthScale").value = earth.scale;
+    u.get("uEarthFibers").value = earth.fibers;
+    u.get("uEarthTooth").value = earth.tooth;
+    u.get("uEarthGrain").value = earth.grain;
+    u.get("uEarthPooling").value = earth.pooling;
   });
 
   return (
@@ -54,18 +72,16 @@ function Post() {
 }
 
 export default function App() {
-  const { background } = useControls("Raum", { background: "#4a38b0" });
-
   return (
     <>
       <Leva collapsed />
       <Canvas camera={{ position: [0, 0, 3.6], fov: 40 }} dpr={[1, 2]}>
-      <color attach="background" args={[background]} />
-      <Stars />
-      <Globe />
-      <OrbitControls enablePan={false} minDistance={2} maxDistance={14} />
-      <FitCamera />
-      <Post />
+        <Background />
+        <Stars />
+        <Globe />
+        <OrbitControls enablePan={false} minDistance={2} maxDistance={14} />
+        <FitCamera />
+        <Post />
       </Canvas>
     </>
   );

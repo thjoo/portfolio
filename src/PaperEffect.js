@@ -1,77 +1,58 @@
-import { Effect } from "postprocessing";
+import { Effect, EffectAttribute } from "postprocessing";
 import { Uniform } from "three";
+import paper from "./shaders/paper.glsl?raw";
 
-// Papier-Pass über das ganze Bild:
-// - leichte UV-Verzerrung (nichts wirkt perfekt gerendert)
-// - Papierfasern + Körnung
-// - sanfte Vignette
+// Letzter Pass, nach Kuwahara, damit die feine Papierstruktur nicht weggeglättet wird.
+// Über den Tiefenpuffer wird unterschieden: Erde (Tiefe < 1) oder Hintergrund (Tiefe = 1).
+// Beide bekommen ihr eigenes Papier.
 const fragmentShader = /* glsl */ `
   uniform float uDistortion;
-  uniform float uGrain;
-  uniform float uFibers;
-  uniform float uVignette;
   uniform float uAspect;
 
-  float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
-  }
+  uniform float uBgScale;
+  uniform float uBgFibers;
+  uniform float uBgTooth;
+  uniform float uBgGrain;
 
-  float valueNoise(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    vec2 u = f * f * (3.0 - 2.0 * f);
-    return mix(
-      mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),
-      mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x),
-      u.y
-    );
-  }
+  uniform float uEarthScale;
+  uniform float uEarthFibers;
+  uniform float uEarthTooth;
+  uniform float uEarthGrain;
+  uniform float uEarthPooling;
 
-  float fbm(vec2 p) {
-    float sum = 0.0;
-    float amp = 0.5;
-    for (int i = 0; i < 5; i++) {
-      sum += valueNoise(p) * amp;
-      p *= 2.1;
-      amp *= 0.5;
-    }
-    return sum;
-  }
+  ${paper}
 
   void mainUv(inout vec2 uv) {
     vec2 p = uv * vec2(uAspect, 1.0);
-    vec2 offset = vec2(fbm(p * 4.0), fbm(p * 4.0 + 5.2)) - 0.5;
+    vec2 offset = vec2(paperFbm(p * 4.0), paperFbm(p * 4.0 + 5.2)) - 0.5;
     uv += offset * uDistortion;
   }
 
-  void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
+  void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth, out vec4 outputColor) {
     vec2 p = uv * vec2(uAspect, 1.0);
-    vec3 color = inputColor.rgb;
+    float isEarth = step(depth, 0.9999);
 
-    // Papierfasern: gestreckter Noise, grob + fein
-    float fibers = fbm(p * vec2(60.0, 220.0)) - 0.5;
-    float tooth = fbm(p * 180.0) - 0.5;
-    float grain = hash(floor(uv * resolution)) - 0.5;
-    color *= 1.0 + fibers * uFibers + tooth * uFibers * 0.8 + grain * uGrain;
+    float bg = paperHeight(p, uBgScale, uBgFibers, uBgTooth, uBgGrain);
+    float earth = paperHeight(p, uEarthScale, uEarthFibers, uEarthTooth, uEarthGrain);
+    // Auf der Erde sammelt sich Pigment in den Papiertälern: Täler dunkler als Erhebungen hell
+    earth = earth < 0.0 ? earth * uEarthPooling : earth * (2.0 - uEarthPooling) * 0.5;
 
-    // Vignette
-    float d = length((uv - 0.5) * vec2(uAspect, 1.0));
-    color *= 1.0 - smoothstep(0.35, 1.1, d) * uVignette;
-
-    outputColor = vec4(color, inputColor.a);
+    float h = mix(bg, earth, isEarth);
+    outputColor = vec4(inputColor.rgb * (1.0 + h), inputColor.a);
   }
 `;
 
 export class PaperEffect extends Effect {
   constructor() {
     super("PaperEffect", fragmentShader, {
-      uniforms: new Map([
-        ["uDistortion", new Uniform(0.003)],
-        ["uGrain", new Uniform(0.06)],
-        ["uFibers", new Uniform(0.12)],
-        ["uVignette", new Uniform(0.25)],
-        ["uAspect", new Uniform(1)],
-      ]),
+      attributes: EffectAttribute.DEPTH,
+      uniforms: new Map(
+        [
+          "uDistortion", "uAspect",
+          "uBgScale", "uBgFibers", "uBgTooth", "uBgGrain",
+          "uEarthScale", "uEarthFibers", "uEarthTooth", "uEarthGrain", "uEarthPooling",
+        ].map((name) => [name, new Uniform(0)])
+      ),
     });
   }
 }
