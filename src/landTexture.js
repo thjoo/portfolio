@@ -79,7 +79,7 @@ function drawCityLights(width, height) {
   const random = mulberry32(42);
   const gaussian = () => Math.sqrt(-2 * Math.log(random() + 1e-9)) * Math.cos(2 * Math.PI * random());
   const pxPerKm = width / 40075;
-  const dotRadius = width / 3000;
+  const dotRadius = width / 5200;
 
   for (let i = 0; i < cities.length; i += 3) {
     const lon = cities[i];
@@ -87,7 +87,7 @@ function drawCityLights(width, height) {
     const population = cities[i + 2] * 1000;
     const size = population / 20000;
 
-    const dots = Math.max(1, Math.round(Math.pow(size, 0.6)));
+    const dots = Math.max(1, Math.round(Math.pow(size, 0.55)));
     const spreadKm = 6 + 9 * Math.pow(size, 0.42);
     // In der equirectangularen Karte werden Breitengrade gegen die Pole gestreckt
     const stretch = 1 / Math.max(Math.cos((lat * Math.PI) / 180), 0.2);
