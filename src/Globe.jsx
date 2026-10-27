@@ -33,6 +33,7 @@ export default function Globe() {
       uGranulation: { value: 0 },
       uIceAmount: { value: 0 },
       uIceCoast: { value: 0 },
+      uIceSoftness: { value: 0 },
       uCityDensity: { value: 0 },
       uSpecular: { value: 0 },
       uFresnel: { value: 0 },
@@ -66,7 +67,8 @@ export default function Globe() {
     }),
     Details: folder({
       iceAmount: { value: 1, min: 0, max: 1, label: "Eis Sommer→Winter" },
-      iceCoast: { value: 0.35, min: 0, max: 1, label: "Küste im Eis" },
+      iceCoast: { value: 0.2, min: 0, max: 1, label: "Küste im Eis" },
+      iceSoftness: { value: 0.14, min: 0.005, max: 0.3, label: "Eis-Übergang weich" },
       cityDensity: { value: 1, min: 0, max: 1.5, label: "Stadtlichter" },
       rotationSpeed: { value: 0.015, min: 0, max: 0.3, label: "Rotation" },
     }),
@@ -96,6 +98,7 @@ export default function Globe() {
     u.uGranulation.value = c.granulation;
     u.uIceAmount.value = c.iceAmount;
     u.uIceCoast.value = c.iceCoast;
+    u.uIceSoftness.value = c.iceSoftness;
     u.uCityDensity.value = c.cityDensity;
     u.uSpecular.value = c.specular;
     u.uFresnel.value = c.fresnel;

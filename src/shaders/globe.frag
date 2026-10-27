@@ -18,6 +18,7 @@ uniform float uEdgeDarkening;
 uniform float uGranulation;
 uniform float uIceAmount;
 uniform float uIceCoast;
+uniform float uIceSoftness;
 uniform float uCityDensity;
 uniform float uSpecular;
 uniform float uFresnel;
@@ -67,9 +68,13 @@ void main() {
 
   // Eis aus der Textur (A-Kanal): Regler 0 = Sommerminimum, 1 = Wintermaximum
   float iceThreshold = mix(0.92, 0.5, uIceAmount);
-  float iceMask = smoothstep(iceThreshold - 0.02, iceThreshold + 0.02, landTex.a + wobble * 0.05);
+  // Weicher, ausfransender Rand zum Wasser: breiter Übergang plus Pigment-Noise
+  float iceEdgeNoise = wobble * 0.06 + fbm(p * 14.0 + 2.0) * 0.04 * uIceSoftness * 10.0;
+  float iceMask = smoothstep(iceThreshold - uIceSoftness, iceThreshold + uIceSoftness, landTex.a + iceEdgeNoise);
   // Landeis hell, Meereis etwas dunkler und bläulicher -> die Küste bleibt unter dem Eis lesbar
-  vec3 iceColor = mix(uSeaIce, uIce, land) * (0.85 + 0.25 * day);
+  // Übergang Landeis -> Meereis über die weiche Landmaske, damit die Farbe ineinander verläuft
+  float landIce = smoothstep(0.05, 0.95, mix(land, landSoft, clamp(uIceSoftness * 10.0, 0.0, 1.0)));
+  vec3 iceColor = mix(uSeaIce, uIce, landIce) * (0.85 + 0.25 * day);
   color = mix(color, iceColor, iceMask);
 
   // Feine Pigment-Kontur entlang der Küste, nur im Eis (Antarktis, Grönland)
