@@ -45,7 +45,7 @@ export default function Globe() {
       landDay: "#6584f2",
       landNight: "#1c1838",
       ice: "#c4d4ff",
-      cityLights: "#fff1c9",
+      cityLights: "#fbf6ea",
       highlight: "#8f98ff",
     }),
     Licht: folder({
@@ -63,7 +63,7 @@ export default function Globe() {
     }),
     Details: folder({
       iceAmount: { value: 1, min: 0, max: 1, label: "Polkappe" },
-      cityDensity: { value: 0.22, min: 0, max: 0.6, label: "Stadtlichter" },
+      cityDensity: { value: 1, min: 0, max: 1.5, label: "Stadtlichter" },
       rotationSpeed: { value: 0.015, min: 0, max: 0.3, label: "Rotation" },
     }),
   });

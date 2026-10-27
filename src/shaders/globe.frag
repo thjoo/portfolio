@@ -28,12 +28,6 @@ varying vec3 vViewDir;
 
 #include ./noise.glsl
 
-float hash(vec2 p) {
-  p = fract(p * vec2(123.34, 456.21));
-  p += dot(p, p + 45.32);
-  return fract(p.x * p.y);
-}
-
 void main() {
   // Rauschen auf der Kugeloberfläche (Objektraum -> keine UV-Naht)
   vec3 p = normalize(vPosition);
@@ -79,15 +73,9 @@ void main() {
   spec *= (1.0 - land) * (0.7 + 0.3 * wash);
   color = mix(color, uHighlight, spec * uSpecular);
 
-  // Stadtlichter: Zufallspunkte in einem Raster, nur auf Land und Nachtseite
-  vec2 grid = vUv * vec2(320.0, 160.0);
-  vec2 cell = floor(grid);
-  vec2 local = fract(grid) - 0.5;
-  float rnd = hash(cell);
-  vec2 offset = vec2(hash(cell + 7.1), hash(cell + 3.3)) - 0.5;
-  float dotShape = 1.0 - smoothstep(0.08, 0.16, length(local - offset * 0.6));
-  float city = step(1.0 - uCityDensity, rnd) * dotShape * land * (1.0 - day) * (1.0 - iceMask);
-  color = mix(color, uCityLights, city * (0.6 + 0.4 * hash(cell + 1.7)));
+  // Stadtlichter aus echten Städten (B-Kanal), nur auf der Nachtseite
+  float city = smoothstep(0.2, 0.7, landTex.b) * smoothstep(0.6, 0.0, day) * (1.0 - iceMask);
+  color = mix(color, uCityLights, clamp(city * uCityDensity, 0.0, 1.0));
 
   // Körnung: Pigment setzt sich in den Papiertälern ab
   float granulation = grainFine * 0.6 + grainCoarse * 0.4;
