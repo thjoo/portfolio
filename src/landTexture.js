@@ -8,6 +8,7 @@ import cities from "./data/cities.json";
 // R = Küste leicht weich (für die wackelige Küstenlinie im Shader)
 // G = stark weichgezeichnet (für den dunklen Pigmentrand)
 // B = Stadtlichter aus echten Städten (GeoNames, ab 20'000 Einwohnern)
+// A = Eis: 0.5 an der Meereis-Kante im Winter, 1.0 rund 10° weiter polwärts (für Sommer/Winter-Regler)
 export function createLandTexture(width = 4096) {
   const height = width / 2;
   const land = feature(land50, land50.objects.land);
@@ -34,13 +35,14 @@ export function createLandTexture(width = 4096) {
   const soft = drawMask(width / 180);
 
   const lights = drawCityLights(width, height);
+  const ice = computeIce(width, height, sharp);
 
   const data = new Uint8Array(width * height * 4);
   for (let i = 0; i < data.length; i += 4) {
     data[i] = sharp[i];
     data[i + 1] = soft[i];
     data[i + 2] = lights[i];
-    data[i + 3] = 255;
+    data[i + 3] = ice[i / 4];
   }
 
   const texture = new THREE.DataTexture(data, width, height);
@@ -109,4 +111,55 @@ function drawCityLights(width, height) {
   }
 
   return ctx.getImageData(0, 0, width, height).data;
+}
+
+// Ungefähre Kante des Meereises beim Wintermaximum (Arktis März, Antarktis September), [Länge, Breite].
+// Quellen: NSIDC / NASA Earth Observatory. Bewusst vereinfacht, die Kante wird im Shader noch gemalt.
+const ARCTIC_EDGE = [
+  [-180, 60], [-170, 58], [-160, 57], [-150, 59], [-140, 70], [-120, 68], [-100, 52], [-80, 52],
+  [-70, 55], [-60, 50], [-50, 55], [-45, 60], [-30, 65], [-20, 67], [-10, 72], [0, 75], [20, 76],
+  [40, 70], [50, 68], [60, 66], [140, 62], [143, 46], [155, 47], [160, 56], [170, 60], [180, 60],
+];
+const ANTARCTIC_EDGE = [
+  [-180, -62], [-150, -62], [-120, -63], [-90, -63], [-70, -61], [-50, -58], [-30, -56], [0, -55],
+  [20, -55], [40, -57], [60, -58], [90, -61], [120, -63], [150, -63], [180, -62],
+];
+
+function edgeAt(table, lon) {
+  for (let i = 0; i < table.length - 1; i++) {
+    const [lon0, lat0] = table[i];
+    const [lon1, lat1] = table[i + 1];
+    if (lon >= lon0 && lon <= lon1) return lat0 + ((lon - lon0) / (lon1 - lon0)) * (lat1 - lat0);
+  }
+  return table[0][1];
+}
+
+function isGreenland(lon, lat) {
+  return (lat > 60 && lat < 75 && lon > -55 && lon < -15) || (lat >= 75 && lon > -70 && lon < -12);
+}
+
+function computeIce(width, height, landData) {
+  const ice = new Uint8Array(width * height);
+  const span = 20;
+  for (let x = 0; x < width; x++) {
+    const lon = (x / width) * 360 - 180;
+    const north = edgeAt(ARCTIC_EDGE, lon);
+    const south = edgeAt(ANTARCTIC_EDGE, lon);
+    for (let y = 0; y < height; y++) {
+      const lat = 90 - (y / height) * 180;
+      const i = y * width + x;
+      const land = landData[i * 4] > 127;
+      let value = 0;
+      if (land) {
+        // Landeis nur auf Grönland und der Antarktis
+        if (isGreenland(lon, lat) || lat < -60) value = 1;
+      } else if (lat > 0) {
+        value = 0.5 + (lat - north) / span;
+      } else {
+        value = 0.5 + (south - lat) / span;
+      }
+      ice[i] = Math.round(Math.min(Math.max(value, 0), 1) * 255);
+    }
+  }
+  return ice;
 }

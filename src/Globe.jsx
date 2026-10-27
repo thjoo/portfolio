@@ -62,7 +62,7 @@ export default function Globe() {
       granulation: { value: 0.09, min: 0, max: 0.25, label: "Körnung" },
     }),
     Details: folder({
-      iceAmount: { value: 1, min: 0, max: 1, label: "Polkappe" },
+      iceAmount: { value: 1, min: 0, max: 1, label: "Eis Sommer→Winter" },
       cityDensity: { value: 1, min: 0, max: 1.5, label: "Stadtlichter" },
       rotationSpeed: { value: 0.015, min: 0, max: 0.3, label: "Rotation" },
     }),

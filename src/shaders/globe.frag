@@ -63,10 +63,9 @@ void main() {
 
   vec3 color = mix(ocean, ground, land);
 
-  // Eis: Polkappe im Norden (auch über dem Meer) und das ganze Land der Antarktis
-  float iceNorth = smoothstep(0.955, 0.975, p.y + wobble * 0.03);
-  float iceSouth = land * smoothstep(-0.83, -0.87, p.y + wobble * 0.03);
-  float iceMask = max(iceNorth, iceSouth) * uIceAmount;
+  // Eis aus der Textur (A-Kanal): Regler 0 = Sommerminimum, 1 = Wintermaximum
+  float iceThreshold = mix(0.92, 0.5, uIceAmount);
+  float iceMask = smoothstep(iceThreshold - 0.02, iceThreshold + 0.02, landTex.a + wobble * 0.05);
   color = mix(color, uIce * (0.85 + 0.25 * day), iceMask);
 
   // Weicher Glanzfleck auf dem Meer, kein harter Specular
