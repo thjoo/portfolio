@@ -6,6 +6,7 @@ uniform vec3 uOceanNight;
 uniform vec3 uLandDay;
 uniform vec3 uLandNight;
 uniform vec3 uIce;
+uniform vec3 uSeaIce;
 uniform vec3 uCityLights;
 uniform vec3 uHighlight;
 
@@ -16,6 +17,7 @@ uniform float uPigment;
 uniform float uEdgeDarkening;
 uniform float uGranulation;
 uniform float uIceAmount;
+uniform float uIceCoast;
 uniform float uCityDensity;
 uniform float uSpecular;
 uniform float uFresnel;
@@ -66,7 +68,13 @@ void main() {
   // Eis aus der Textur (A-Kanal): Regler 0 = Sommerminimum, 1 = Wintermaximum
   float iceThreshold = mix(0.92, 0.5, uIceAmount);
   float iceMask = smoothstep(iceThreshold - 0.02, iceThreshold + 0.02, landTex.a + wobble * 0.05);
-  color = mix(color, uIce * (0.85 + 0.25 * day), iceMask);
+  // Landeis hell, Meereis etwas dunkler und bläulicher -> die Küste bleibt unter dem Eis lesbar
+  vec3 iceColor = mix(uSeaIce, uIce, land) * (0.85 + 0.25 * day);
+  color = mix(color, iceColor, iceMask);
+
+  // Feine Pigment-Kontur entlang der Küste, nur im Eis (Antarktis, Grönland)
+  float coastLine = 1.0 - smoothstep(0.0, 0.18, abs(landTex.r - 0.5 + wobble * 0.03));
+  color *= 1.0 - coastLine * iceMask * uIceCoast * (0.7 + 0.3 * edgeNoise);
 
   // Weicher Glanzfleck auf dem Meer, kein harter Specular
   vec3 reflected = reflect(-normalize(uSunDirection), normal);

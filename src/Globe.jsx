@@ -22,6 +22,7 @@ export default function Globe() {
       uLandDay: { value: new THREE.Color() },
       uLandNight: { value: new THREE.Color() },
       uIce: { value: new THREE.Color() },
+      uSeaIce: { value: new THREE.Color() },
       uCityLights: { value: new THREE.Color() },
       uHighlight: { value: new THREE.Color() },
       uTerminatorSoftness: { value: 0 },
@@ -31,6 +32,7 @@ export default function Globe() {
       uEdgeDarkening: { value: 0 },
       uGranulation: { value: 0 },
       uIceAmount: { value: 0 },
+      uIceCoast: { value: 0 },
       uCityDensity: { value: 0 },
       uSpecular: { value: 0 },
       uFresnel: { value: 0 },
@@ -44,7 +46,8 @@ export default function Globe() {
       oceanNight: "#36318a",
       landDay: "#6584f2",
       landNight: "#1c1838",
-      ice: "#c4d4ff",
+      ice: "#d6e0ff",
+      seaIce: "#a7b6f2",
       cityLights: "#fbf6ea",
       highlight: "#8f98ff",
     }),
@@ -63,6 +66,7 @@ export default function Globe() {
     }),
     Details: folder({
       iceAmount: { value: 1, min: 0, max: 1, label: "Eis Sommer→Winter" },
+      iceCoast: { value: 0.35, min: 0, max: 1, label: "Küste im Eis" },
       cityDensity: { value: 1, min: 0, max: 1.5, label: "Stadtlichter" },
       rotationSpeed: { value: 0.015, min: 0, max: 0.3, label: "Rotation" },
     }),
@@ -76,6 +80,7 @@ export default function Globe() {
     u.uLandDay.value.set(c.landDay);
     u.uLandNight.value.set(c.landNight);
     u.uIce.value.set(c.ice);
+    u.uSeaIce.value.set(c.seaIce);
     u.uCityLights.value.set(c.cityLights);
     u.uHighlight.value.set(c.highlight);
 
@@ -90,6 +95,7 @@ export default function Globe() {
     u.uEdgeDarkening.value = c.edgeDarkening;
     u.uGranulation.value = c.granulation;
     u.uIceAmount.value = c.iceAmount;
+    u.uIceCoast.value = c.iceCoast;
     u.uCityDensity.value = c.cityDensity;
     u.uSpecular.value = c.specular;
     u.uFresnel.value = c.fresnel;
