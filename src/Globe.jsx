@@ -6,11 +6,8 @@ import { createLandTexture } from "./landTexture.js";
 import vertexShader from "./shaders/globe.vert?raw";
 import fragmentSource from "./shaders/globe.frag?raw";
 import noise from "./shaders/noise.glsl?raw";
-import ice from "./shaders/ice.glsl?raw";
 
-const fragmentShader = fragmentSource
-  .replace("#include ./noise.glsl", noise)
-  .replace("#include ./ice.glsl", ice);
+const fragmentShader = fragmentSource.replace("#include ./noise.glsl", noise);
 
 export default function Globe() {
   const mesh = useRef();
@@ -42,7 +39,6 @@ export default function Globe() {
       uScribble: { value: 0 },
       uScribbleDensity: { value: 1 },
       uScribbleWidth: { value: 1.6 },
-      uIceFill: { value: 0 },
       uCityDensity: { value: 0 },
       uSpecular: { value: 0 },
       uFresnel: { value: 0 },
@@ -77,13 +73,12 @@ export default function Globe() {
     Details: folder({
       iceNorth: { value: 0, min: 0, max: 1, label: "Arktis Sommer→Winter" },
       iceSouth: { value: 1, min: 0, max: 1, label: "Antarktis Sommer→Winter" },
-      iceIrregular: { value: 1, min: 0, max: 2, label: "Eiskante unregelmässig" },
+      iceIrregular: { value: 1, min: 0, max: 2, label: "Knäuel unordentlich" },
       iceCoast: { value: 0.35, min: 0, max: 1, label: "Küste im Eis" },
       iceSoftness: { value: 0.14, min: 0.005, max: 0.3, label: "Eis-Übergang weich" },
       scribble: { value: 1, min: 0, max: 1, label: "Gekritzel" },
-      scribbleDensity: { value: 0.6, min: 0.2, max: 3, label: "Gekritzel dicht" },
-      scribbleWidth: { value: 1.6, min: 0.5, max: 5, label: "Strichbreite (px)" },
-      iceFill: { value: 0.4, min: 0, max: 1, label: "Meereis Grundfarbe" },
+      scribbleDensity: { value: 1, min: 0.2, max: 1.8, label: "Schlaufen (Anzahl)" },
+      scribbleWidth: { value: 1.8, min: 0.5, max: 5, label: "Strichbreite (px)" },
       cityDensity: { value: 1, min: 0, max: 1.5, label: "Stadtlichter" },
       rotationSpeed: { value: 0.015, min: 0, max: 0.3, label: "Rotation" },
     }),
@@ -119,7 +114,6 @@ export default function Globe() {
     u.uScribble.value = c.scribble;
     u.uScribbleDensity.value = c.scribbleDensity;
     u.uScribbleWidth.value = c.scribbleWidth;
-    u.uIceFill.value = c.iceFill;
     u.uCityDensity.value = c.cityDensity;
     u.uSpecular.value = c.specular;
     u.uFresnel.value = c.fresnel;

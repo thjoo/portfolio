@@ -76,7 +76,6 @@ function Post() {
       u.get("uIceNorth").value = g.uIceNorth.value;
       u.get("uIceSouth").value = g.uIceSouth.value;
       u.get("uIceIrregular").value = g.uIceIrregular.value;
-      u.get("uIceSoftness").value = g.uIceSoftness.value;
       u.get("uScribble").value = g.uScribble.value;
       u.get("uScribbleDensity").value = g.uScribbleDensity.value;
       u.get("uIceCoast").value = g.uIceCoast.value;

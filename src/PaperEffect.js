@@ -33,7 +33,6 @@ const fragmentShader = /* glsl */ `
   uniform float uIceNorth;
   uniform float uIceSouth;
   uniform float uIceIrregular;
-  uniform float uIceSoftness;
   uniform float uScribble;
   uniform float uScribbleDensity;
   uniform float uIceCoast;
@@ -79,22 +78,20 @@ const fragmentShader = /* glsl */ `
       vec2 sphereUv = vec2(atan(local.z, -local.x) / 6.28318530718, 1.0 - acos(clamp(local.y, -1.0, 1.0)) / 3.14159265359);
       sphereUv.x = fract(sphereUv.x);
       vec4 landTexel = texture2D(uLand, sphereUv);
-      float iceValue = landTexel.a;
-      float iceMask = iceCoverage(local, iceValue, uIceNorth, uIceSouth, uIceIrregular, uIceSoftness);
-      if (iceMask > 0.001) {
+
+      // Eis = gekritzeltes Knäuel über jedem Pol. Grösse je nach Jahreszeit (0 Sommer, 1 Winter)
+      float pole = local.y > 0.0 ? 1.0 : -1.0;
+      float radiusDeg = pole > 0.0 ? mix(13.0, 30.0, uIceNorth) : mix(24.0, 35.0, uIceSouth);
+      float pressure = scribbleBall(local, pole, radiusDeg, 34.0 * uScribbleDensity, uScribbleWidth, uIceIrregular);
+      if (pressure > 0.0) {
         float sun = dot(normalize(world.xyz), normalize(uSunDirection));
         float light = 0.85 + 0.25 * smoothstep(-0.2, 0.2, sun);
-        float pressure = iceScribble(local, iceMask, uScribbleDensity, uScribbleWidth);
-        // Auf dem Landeis weniger Druck, damit die Küste (z. B. der Antarktis) lesbar bleibt
-        float landIce = smoothstep(0.3, 0.7, landTexel.r);
-        pressure *= mix(1.0, 0.4, landIce);
-        // Papierzahn für die Kreide, direkt auf der Kugel
+        // Über Landeis etwas weniger Druck, damit die Antarktis durchscheint
+        float landIce = smoothstep(0.3, 0.7, landTexel.r) * step(0.97, landTexel.a);
+        pressure *= mix(1.0, 0.75, landIce);
         float tooth = crayonTooth(local, uEarthScale * 0.7);
         float scribble = crayonDeposit(pressure, tooth);
         color = mix(color, uIceColor * light * 1.05, clamp(scribble * uScribble, 0.0, 1.0));
-        // Küstenlinie über dem Gekritzel
-        float coastLine = 1.0 - smoothstep(0.0, 0.22, abs(landTexel.r - 0.5));
-        color *= 1.0 - coastLine * iceMask * uIceCoast;
       }
     }
 
@@ -133,7 +130,6 @@ export class PaperEffect extends Effect {
               ["uIceNorth", new Uniform(0)],
               ["uIceSouth", new Uniform(0)],
               ["uIceIrregular", new Uniform(0)],
-              ["uIceSoftness", new Uniform(0.1)],
               ["uScribble", new Uniform(0)],
               ["uScribbleDensity", new Uniform(1)],
               ["uIceCoast", new Uniform(0)],

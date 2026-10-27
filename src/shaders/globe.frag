@@ -21,7 +21,6 @@ uniform float uIceSouth;
 uniform float uIceIrregular;
 uniform float uIceCoast;
 uniform float uIceSoftness;
-uniform float uIceFill;
 uniform float uCityDensity;
 uniform float uSpecular;
 uniform float uFresnel;
@@ -33,7 +32,6 @@ varying vec3 vNormalW;
 varying vec3 vViewDir;
 
 #include ./noise.glsl
-#include ./ice.glsl
 
 void main() {
   // Rauschen auf der Kugeloberfläche (Objektraum -> keine UV-Naht)
@@ -71,7 +69,8 @@ void main() {
   vec3 color = mix(ocean, ground, land);
 
   // Eis aus der Textur (A-Kanal), je Halbkugel eigene Jahreszeit
-  float iceMask = iceCoverage(p, landTex.a, uIceNorth, uIceSouth, uIceIrregular, uIceSoftness);
+  // Gemalt wird nur Landeis (Antarktis, Grönland); das Meereis kritzelt der Papier-Pass als Knäuel darüber
+  float iceMask = land * smoothstep(0.96, 0.99, landTex.a + wobble * 0.02);
   // Landeis hell, Meereis etwas dunkler und bläulicher -> die Küste bleibt unter dem Eis lesbar
   // Übergang Landeis -> Meereis über die weiche Landmaske, damit die Farbe ineinander verläuft
   float landIce = smoothstep(0.05, 0.95, mix(land, landSoft, clamp(uIceSoftness * 10.0, 0.0, 1.0)));
@@ -79,7 +78,7 @@ void main() {
 
   // Blasse Grundfläche unter den Strichen: auf dem Meer kaum, auf Landeis deutlicher
   vec3 iceBase = mix(uSeaIce, uIce, landIce);
-  color = mix(color, iceBase * light, iceMask * mix(uIceFill, 0.7, landIce));
+  color = mix(color, iceBase * light, iceMask * 0.8);
 
   // Das Gekritzel darüber zeichnet der Papier-Pass nach Kuwahara (sonst würde es weggeglättet)
 
