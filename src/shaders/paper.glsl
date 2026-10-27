@@ -31,6 +31,6 @@ float paperHeight(vec2 p, float scale, float fibers, float tooth, float grain) {
   vec2 q = p * scale;
   float f = paperFbm(q * vec2(18.0, 70.0)) - 0.5;
   float t = paperFbm(q * 60.0 + 3.1) - 0.5;
-  float g = paperHash(floor(q * 400.0)) - 0.5;
+  float g = paperNoise(q * 400.0) - 0.5;
   return f * fibers + t * tooth + g * grain;
 }

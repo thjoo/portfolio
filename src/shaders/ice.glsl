@@ -13,27 +13,45 @@ float iceCoverage(vec3 p, float iceValue, float iceNorth, float iceSouth, float 
   return smoothstep(threshold - softness, threshold + softness, value);
 }
 
-// Gekritzel wie mit weissem Farbstift: Linien entlang der Breitengrade, von Noise so stark
-// verbogen, dass Schlaufen entstehen. Drei Lagen, die mit der Eisdichte dazukommen.
+// Gekritzel wie mit fetter Wachs-/Ölkreide: liefert den "Druck" 0..1 der Striche.
+// Breite Striche entlang der Breitengrade, von Noise zu Schlaufen verbogen, in der Mitte stärker.
+// Ob Pigment haftet, entscheidet danach der Papierzahn (siehe crayonDeposit).
 float iceScribble(vec3 p, float iceMask, float density) {
-  float latitude = asin(clamp(p.y, -1.0, 1.0));
-  float scribble = 0.0;
+  float pressure = 0.0;
   for (int i = 0; i < 3; i++) {
     float fi = float(i);
     vec3 q = p + fi * 3.17;
-    float lineCount = (15.0 + fi * 5.0) * density;
-    float u = latitude * lineCount + fbm(q * 2.0) * 2.5 + fbm(q * 5.0 + 1.7) * 2.2;
-    float d = abs(fract(u) - 0.5);
-    float aa = fwidth(u) * 0.75;
-    float lineWidth = 0.17 + 0.06 * snoise(q * 6.0);
-    float stroke = 1.0 - smoothstep(lineWidth - aa, lineWidth + aa, d);
-    // Striche setzen ab und laufen aus
-    float breaks = smoothstep(-0.6, 0.0, snoise(q * vec3(5.0, 11.0, 5.0)));
+    // Jede Lage hat eine leicht geneigte Achse: die Striche kreuzen sich,
+    // statt am Pol einen gemeinsamen Mittelpunkt (Fingerabdruck) zu bilden
+    vec3 axis = normalize(vec3(fi == 1.0 ? 0.32 : (fi == 2.0 ? -0.24 : 0.0), 1.0, fi == 1.0 ? 0.12 : (fi == 2.0 ? -0.3 : 0.0)));
+    float axial = dot(p, axis);
+    float latitude = asin(clamp(axial, -1.0, 1.0));
+    // Direkt um die Achse ausblenden
+    float poleFade = 1.0 - smoothstep(0.93, 0.985, abs(axial));
+    float lineCount = (11.0 + fi * 4.0) * density;
+    float u = latitude * lineCount + fbm(q * 1.6) * 3.0 + snoise(q * 4.0 + 1.7) * 0.6;
+    float d = abs(fract(u) - 0.5) * 2.0;
+    // Breites, weiches Strichprofil: Mitte voll, Rand läuft aus
+    float width = 0.8 + 0.2 * snoise(q * 3.0);
+    float stroke = 1.0 - smoothstep(0.0, width, d);
+    // Druck schwankt entlang des Strichs, Striche setzen ab
+    float strokePressure = 0.6 + 0.4 * snoise(q * vec3(4.0, 9.0, 4.0));
+    float breaks = smoothstep(-0.7, -0.1, snoise(q * vec3(3.0, 7.0, 3.0)));
     // Je dichter das Eis, desto mehr Lagen
-    float layer = smoothstep(0.02 + fi * 0.12, 0.2 + fi * 0.12, iceMask);
-    scribble = max(scribble, stroke * breaks * layer);
+    float layer = smoothstep(0.02 + fi * 0.15, 0.25 + fi * 0.15, iceMask);
+    pressure = max(pressure, stroke * strokePressure * breaks * layer * poleFade);
   }
-  // Kreidekorn: der Strich deckt nicht überall
-  float chalk = smoothstep(-0.85, 0.1, snoise(p * 120.0)) * (0.85 + 0.15 * snoise(p * 45.0));
-  return scribble * chalk;
+  return pressure * smoothstep(0.0, 0.3, iceMask);
+}
+
+// Papierzahn für Wachskreide: organische Körnung auf der Kugel, ohne Raster.
+// Liefert eine Höhe um 0 (negativ = Tal).
+float crayonTooth(vec3 p, float scale) {
+  vec3 q = p * scale;
+  return snoise(q * 420.0) * 0.45 + snoise(q * 190.0 + 3.1) * 0.35 + snoise(q * 70.0 + 7.3) * 0.2;
+}
+
+// Wachskreide haftet nur auf den Papierspitzen; mit mehr Druck schliesst sich die Fläche.
+float crayonDeposit(float pressure, float tooth) {
+  return smoothstep(0.34, 0.52, pressure + tooth * 0.5);
 }

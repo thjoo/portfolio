@@ -83,10 +83,13 @@ const fragmentShader = /* glsl */ `
       if (iceMask > 0.001) {
         float sun = dot(normalize(world.xyz), normalize(uSunDirection));
         float light = 0.85 + 0.25 * smoothstep(-0.2, 0.2, sun);
-        float scribble = iceScribble(local, iceMask, uScribbleDensity);
-        // Auf dem Landeis weniger Striche, damit die Küste (z. B. der Antarktis) lesbar bleibt
+        float pressure = iceScribble(local, iceMask, uScribbleDensity);
+        // Auf dem Landeis weniger Druck, damit die Küste (z. B. der Antarktis) lesbar bleibt
         float landIce = smoothstep(0.3, 0.7, landTexel.r);
-        scribble *= mix(1.0, 0.45, landIce);
+        pressure *= mix(1.0, 0.62, landIce);
+        // Papierzahn für die Kreide, direkt auf der Kugel
+        float tooth = crayonTooth(local, uEarthScale * 0.7);
+        float scribble = crayonDeposit(pressure, tooth);
         color = mix(color, uIceColor * light * 1.05, clamp(scribble * uScribble, 0.0, 1.0));
         // Küstenlinie über dem Gekritzel
         float coastLine = 1.0 - smoothstep(0.0, 0.22, abs(landTexel.r - 0.5));
