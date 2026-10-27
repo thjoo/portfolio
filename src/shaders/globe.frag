@@ -93,7 +93,7 @@ void main() {
   color = mix(color, uHighlight, spec * uSpecular);
 
   // Stadtlichter aus echten Städten (B-Kanal), nur auf der Nachtseite
-  float city = smoothstep(0.08, 0.45, landTex.b) * smoothstep(0.6, 0.0, day) * (1.0 - iceMask);
+  float city = smoothstep(0.08, 0.45, landTex.b) * (1.0 - smoothstep(0.0, 0.6, day)) * (1.0 - iceMask);
   color = mix(color, uCityLights, clamp(city * uCityDensity, 0.0, 1.0));
 
   // Körnung: Pigment setzt sich in den Papiertälern ab

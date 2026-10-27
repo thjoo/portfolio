@@ -88,7 +88,7 @@ const fragmentShader = /* glsl */ `
         float light = 0.85 + 0.25 * smoothstep(-0.2, 0.2, sun);
         // Über Landeis etwas weniger Druck, damit die Antarktis durchscheint
         float landIce = smoothstep(0.3, 0.7, landTexel.r) * step(0.97, landTexel.a);
-        pressure *= mix(1.0, 0.75, landIce);
+        pressure *= mix(1.0, 0.92, landIce);
         float tooth = crayonTooth(local, uEarthScale * 0.7);
         float scribble = crayonDeposit(pressure, tooth);
         color = mix(color, uIceColor * light * 1.05, clamp(scribble * uScribble, 0.0, 1.0));

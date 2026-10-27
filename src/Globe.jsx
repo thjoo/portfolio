@@ -78,7 +78,7 @@ export default function Globe() {
       iceSoftness: { value: 0.14, min: 0.005, max: 0.3, label: "Eis-Übergang weich" },
       scribble: { value: 1, min: 0, max: 1, label: "Gekritzel" },
       scribbleDensity: { value: 1, min: 0.2, max: 1.8, label: "Schlaufen (Anzahl)" },
-      scribbleWidth: { value: 1.8, min: 0.5, max: 5, label: "Strichbreite (px)" },
+      scribbleWidth: { value: 3.2, min: 0.5, max: 8, label: "Strichbreite (px)" },
       cityDensity: { value: 1, min: 0, max: 1.5, label: "Stadtlichter" },
       rotationSpeed: { value: 0.015, min: 0, max: 0.3, label: "Rotation" },
     }),
