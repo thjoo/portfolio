@@ -63,8 +63,10 @@ void main() {
 
   vec3 color = mix(ocean, ground, land);
 
-  // Polkappe (Norden), helle Lasur mit unregelmässigem Rand
-  float iceMask = smoothstep(0.955, 0.975, p.y + wobble * 0.03) * uIceAmount;
+  // Eis: Polkappe im Norden (auch über dem Meer) und das ganze Land der Antarktis
+  float iceNorth = smoothstep(0.955, 0.975, p.y + wobble * 0.03);
+  float iceSouth = land * smoothstep(-0.83, -0.87, p.y + wobble * 0.03);
+  float iceMask = max(iceNorth, iceSouth) * uIceAmount;
   color = mix(color, uIce * (0.85 + 0.25 * day), iceMask);
 
   // Weicher Glanzfleck auf dem Meer, kein harter Specular
