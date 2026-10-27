@@ -24,6 +24,8 @@ function FitCamera() {
 
 function Post() {
   const size = useThree((state) => state.size);
+  const camera = useThree((state) => state.camera);
+  const scene = useThree((state) => state.scene);
   const paper = useMemo(() => new PaperEffect(), []);
 
   const p = useControls("Nachbearbeitung", {
@@ -41,6 +43,7 @@ function Post() {
   });
 
   const earth = useControls("Papier Erde", {
+    follow: { value: true, label: "dreht mit" },
     scale: { value: 1.6, min: 0.3, max: 4, label: "Grösse" },
     fibers: { value: 0.08, min: 0, max: 0.5, label: "Fasern" },
     tooth: { value: 0.2, min: 0, max: 0.5, label: "Zahn" },
@@ -61,6 +64,11 @@ function Post() {
     u.get("uEarthTooth").value = earth.tooth;
     u.get("uEarthGrain").value = earth.grain;
     u.get("uEarthPooling").value = earth.pooling;
+    u.get("uEarthFollow").value = earth.follow ? 1 : 0;
+    u.get("uInverseProjection").value.copy(camera.projectionMatrixInverse);
+    u.get("uCameraWorld").value.copy(camera.matrixWorld);
+    const globe = scene.getObjectByName("globe");
+    if (globe) u.get("uGlobeInverse").value.copy(globe.matrixWorld).invert();
   });
 
   return (

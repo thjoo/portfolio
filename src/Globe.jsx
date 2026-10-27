@@ -64,7 +64,7 @@ export default function Globe() {
     Details: folder({
       iceAmount: { value: 1, min: 0, max: 1, label: "Polkappe" },
       cityDensity: { value: 0.22, min: 0, max: 0.6, label: "Stadtlichter" },
-      rotationSpeed: { value: 0.01, min: 0, max: 0.3, label: "Rotation" },
+      rotationSpeed: { value: 0.015, min: 0, max: 0.3, label: "Rotation" },
     }),
   });
 
@@ -98,7 +98,7 @@ export default function Globe() {
   });
 
   return (
-    <mesh ref={mesh} rotation={[0.3, -1.15, -0.12]}>
+    <mesh ref={mesh} name="globe" rotation={[0.3, -1.15, -0.12]}>
       <sphereGeometry args={[1, 128, 64]} />
       <shaderMaterial
         vertexShader={vertexShader}
