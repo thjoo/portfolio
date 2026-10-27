@@ -25,15 +25,15 @@ float iceScribble(vec3 p, float iceMask, float density) {
     float u = latitude * lineCount + fbm(q * 2.0) * 2.5 + fbm(q * 5.0 + 1.7) * 2.2;
     float d = abs(fract(u) - 0.5);
     float aa = fwidth(u) * 0.75;
-    float lineWidth = 0.09 + 0.04 * snoise(q * 6.0);
+    float lineWidth = 0.17 + 0.06 * snoise(q * 6.0);
     float stroke = 1.0 - smoothstep(lineWidth - aa, lineWidth + aa, d);
     // Striche setzen ab und laufen aus
-    float breaks = smoothstep(-0.3, 0.2, snoise(q * vec3(5.0, 11.0, 5.0)));
+    float breaks = smoothstep(-0.6, 0.0, snoise(q * vec3(5.0, 11.0, 5.0)));
     // Je dichter das Eis, desto mehr Lagen
-    float layer = smoothstep(0.05 + fi * 0.28, 0.3 + fi * 0.28, iceMask);
+    float layer = smoothstep(0.02 + fi * 0.12, 0.2 + fi * 0.12, iceMask);
     scribble = max(scribble, stroke * breaks * layer);
   }
   // Kreidekorn: der Strich deckt nicht überall
-  float chalk = smoothstep(-0.6, 0.3, snoise(p * 120.0)) * (0.8 + 0.2 * snoise(p * 45.0));
+  float chalk = smoothstep(-0.85, 0.1, snoise(p * 120.0)) * (0.85 + 0.15 * snoise(p * 45.0));
   return scribble * chalk;
 }

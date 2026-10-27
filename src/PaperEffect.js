@@ -36,6 +36,7 @@ const fragmentShader = /* glsl */ `
   uniform float uIceSoftness;
   uniform float uScribble;
   uniform float uScribbleDensity;
+  uniform float uIceCoast;
   uniform vec3 uIceColor;
   uniform vec3 uSunDirection;
 
@@ -76,13 +77,20 @@ const fragmentShader = /* glsl */ `
       // Gekritzel im Eis. UV wie bei SphereGeometry: u = atan(z, -x) / 2pi, v = 1 - acos(y) / pi
       vec2 sphereUv = vec2(atan(local.z, -local.x) / 6.28318530718, 1.0 - acos(clamp(local.y, -1.0, 1.0)) / 3.14159265359);
       sphereUv.x = fract(sphereUv.x);
-      float iceValue = texture2D(uLand, sphereUv).a;
+      vec4 landTexel = texture2D(uLand, sphereUv);
+      float iceValue = landTexel.a;
       float iceMask = iceCoverage(local, iceValue, uIceNorth, uIceSouth, uIceIrregular, uIceSoftness);
       if (iceMask > 0.001) {
         float sun = dot(normalize(world.xyz), normalize(uSunDirection));
         float light = 0.85 + 0.25 * smoothstep(-0.2, 0.2, sun);
         float scribble = iceScribble(local, iceMask, uScribbleDensity);
+        // Auf dem Landeis weniger Striche, damit die Küste (z. B. der Antarktis) lesbar bleibt
+        float landIce = smoothstep(0.3, 0.7, landTexel.r);
+        scribble *= mix(1.0, 0.45, landIce);
         color = mix(color, uIceColor * light * 1.05, clamp(scribble * uScribble, 0.0, 1.0));
+        // Küstenlinie über dem Gekritzel
+        float coastLine = 1.0 - smoothstep(0.0, 0.22, abs(landTexel.r - 0.5));
+        color *= 1.0 - coastLine * iceMask * uIceCoast;
       }
     }
 
@@ -124,6 +132,7 @@ export class PaperEffect extends Effect {
               ["uIceSoftness", new Uniform(0.1)],
               ["uScribble", new Uniform(0)],
               ["uScribbleDensity", new Uniform(1)],
+              ["uIceCoast", new Uniform(0)],
               ["uIceColor", new Uniform(new Color())],
               ["uSunDirection", new Uniform(new Vector3(0, 0, 1))],
             ]

@@ -79,6 +79,7 @@ function Post() {
       u.get("uIceSoftness").value = g.uIceSoftness.value;
       u.get("uScribble").value = g.uScribble.value;
       u.get("uScribbleDensity").value = g.uScribbleDensity.value;
+      u.get("uIceCoast").value = g.uIceCoast.value;
       u.get("uIceColor").value.copy(g.uIce.value);
       u.get("uSunDirection").value.copy(g.uSunDirection.value);
     }
