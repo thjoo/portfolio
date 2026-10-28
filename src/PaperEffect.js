@@ -71,10 +71,14 @@ const fragmentShader = /* glsl */ `
     float bg = paperHeight(p, uBgScale, uBgFibers, uBgTooth, uBgGrain);
     vec3 color = inputColor.rgb;
     vec3 local = vec3(0.0);
+    float onGlobe = 0.0;
     if (isEarth > 0.5) {
       vec4 view = uInverseProjection * vec4(vec3(uv, depth) * 2.0 - 1.0, 1.0);
       vec4 world = uCameraWorld * vec4(view.xyz / view.w, 1.0);
-      local = normalize((uGlobeInverse * world).xyz);
+      vec3 localRaw = (uGlobeInverse * world).xyz;
+      local = normalize(localRaw);
+      // Nur Pixel auf der Kugeloberfläche sind Erde; Objekte davor (Ballon …) bekommen kein Eis
+      onGlobe = step(abs(length(localRaw) - 1.0), 0.02);
 
       // Gekritzel im Eis. UV wie bei SphereGeometry: u = atan(z, -x) / 2pi, v = 1 - acos(y) / pi
       vec2 sphereUv = vec2(atan(local.z, -local.x) / 6.28318530718, 1.0 - acos(clamp(local.y, -1.0, 1.0)) / 3.14159265359);
@@ -97,8 +101,8 @@ const fragmentShader = /* glsl */ `
       // Über Landeis etwas weniger Druck, damit die Antarktis durchscheint
       float landIce = smoothstep(0.3, 0.7, landTexel.r) * step(0.97, landTexel.a);
       pressure *= mix(1.0, 0.92, landIce);
-      float scribble = crayonDeposit(pressure, tooth) * uScribble;
-      float shadowCover = crayonDeposit(shadowPressure, tooth * 0.3) * uScribble;
+      float scribble = crayonDeposit(pressure, tooth) * uScribble * onGlobe;
+      float shadowCover = crayonDeposit(shadowPressure, tooth * 0.3) * uScribble * onGlobe;
 
       // Schlagschatten auf dem Untergrund: weich, dunkler und violett getönt
       float castShadow = shadowCover * (1.0 - scribble);
@@ -116,7 +120,7 @@ const fragmentShader = /* glsl */ `
     }
 
     float earth;
-    if (uEarthFollow > 0.5 && isEarth > 0.5) {
+    if (uEarthFollow > 0.5 && onGlobe > 0.5) {
       earth = sphericalPaper(local, uEarthScale, uEarthFibers, uEarthTooth, uEarthGrain);
     } else {
       earth = paperHeight(p, uEarthScale, uEarthFibers, uEarthTooth, uEarthGrain);

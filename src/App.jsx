@@ -6,6 +6,7 @@ import { EffectComposer, Kuwahara } from "@react-three/postprocessing";
 import { Leva, useControls } from "leva";
 import Globe from "./Globe.jsx";
 import Stars from "./Stars.jsx";
+import Balloon from "./Balloon.jsx";
 import Background from "./Background.jsx";
 import { PaperEffect } from "./PaperEffect.js";
 
@@ -103,6 +104,7 @@ export default function App() {
         <Background />
         <Stars />
         <Globe />
+        <Balloon />
         <OrbitControls enablePan={false} minDistance={2} maxDistance={14} />
         <FitCamera />
         <Post />
