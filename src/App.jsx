@@ -15,6 +15,7 @@ import Rocket from "./Rocket.jsx";
 import Airplane from "./Airplane.jsx";
 import Volcano from "./Volcano.jsx";
 import Clouds from "./Clouds.jsx";
+import Aurora from "./Aurora.jsx";
 
 // New York -> Ärmelkanal (über den Nordatlantik)
 const ATLANTIC_ROUTE = [
@@ -174,6 +175,7 @@ export default function App() {
         <Stars />
         <Globe />
         <Clouds />
+        <Aurora />
         <Meteor />
         {/* Grössen nach echter Länge gestaffelt (gestaucht, damit alle erkennbar bleiben):
             Containerschiff ~400 m, Kreuzfahrtschiff ~300 m, Frachter ~190 m, Forschungsschiff ~120 m */}
