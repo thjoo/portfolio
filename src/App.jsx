@@ -13,6 +13,7 @@ import Zeppelin from "./Zeppelin.jsx";
 import Satellite from "./Satellite.jsx";
 import Rocket from "./Rocket.jsx";
 import Airplane from "./Airplane.jsx";
+import Volcano from "./Volcano.jsx";
 
 // New York -> Ärmelkanal (über den Nordatlantik)
 const ATLANTIC_ROUTE = [
@@ -199,6 +200,7 @@ export default function App() {
         <Zeppelin />
         <Satellite />
         <Rocket />
+        <Volcano />
         {/* Flugzeuge auf Grosskreisen: Zürich -> New York, London -> Kapstadt */}
         <Airplane label="Flugzeug Zürich–New York" from={[47.46, 8.56]} to={[40.64, -73.78]} livery="#d9614c" start={0.3} />
         <Airplane

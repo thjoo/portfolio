@@ -8,7 +8,7 @@ import Paint from "./Paint.jsx";
 import { latLonToVector } from "./route.js";
 import glowFragment from "./shaders/glow.frag?raw";
 import noise from "./shaders/noise.glsl?raw";
-import sunlight from "./shaders/sunlight.glsl?raw";
+import { SmokePool } from "./smoke.js";
 
 // Cape Canaveral
 const SITE = [28.5, -80.6];
@@ -43,62 +43,6 @@ const flameFragment = /* glsl */ `
     vec3 color = mix(vec3(0.94, 0.42, 0.2), vec3(1.0, 0.95, 0.72), smoothstep(0.35, 0.9, along + flicker));
     float alpha = smoothstep(0.0, 0.55, along + flicker) * uPower;
     if (alpha < 0.01) discard;
-    gl_FragColor = vec4(color, alpha);
-    #include <colorspace_fragment>
-  }
-`;
-
-// Rauchwolken: Partikel in Erd-Koordinaten, wachsen und verblassen; im Erdschatten dunkel
-const SMOKE = 900;
-function smokeGeometry() {
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(SMOKE * 3), 3));
-  geometry.setAttribute("aAge", new THREE.BufferAttribute(new Float32Array(SMOKE).fill(1), 1));
-  geometry.setAttribute("aSize", new THREE.BufferAttribute(new Float32Array(SMOKE), 1));
-  geometry.setAttribute("aSeed", new THREE.BufferAttribute(new Float32Array(SMOKE), 1));
-  return geometry;
-}
-const smokeVertex = /* glsl */ `
-  uniform float uPixelRatio;
-  attribute float aAge;  // 0 = frisch, 1 = verweht
-  attribute float aSize;
-  attribute float aSeed;
-  varying float vAge;
-  varying float vSeed;
-  varying vec3 vWorld;
-  void main() {
-    vAge = aAge;
-    vSeed = aSeed;
-    vec4 world = modelMatrix * vec4(position, 1.0);
-    vWorld = world.xyz;
-    vec4 mv = viewMatrix * world;
-    gl_Position = projectionMatrix * mv;
-    gl_PointSize = aSize * uPixelRatio * (0.35 + 1.65 * sqrt(aAge)) * (10.0 / -mv.z);
-  }
-`;
-const smokeFragment = /* glsl */ `
-  uniform vec3 uSunDirection;
-  varying float vAge;
-  varying float vSeed;
-  varying vec3 vWorld;
-  ${noise}
-  ${sunlight}
-  void main() {
-    if (vAge >= 1.0) discard;
-    vec2 p = gl_PointCoord - 0.5;
-    // Unregelmässiger Wolkenrand wie ein nasser Pinseltupfer
-    float wobble = snoise(vec3(p * 4.0, vSeed * 10.0)) * 0.12;
-    float d = length(p) * 2.0 + wobble;
-    float body = 1.0 - smoothstep(0.55, 0.95, d);
-    if (body <= 0.0) discard;
-    // Pigment sammelt sich am Rand
-    float rim = smoothstep(0.45, 0.85, d) * body;
-    vec3 color = vec3(0.95, 0.93, 0.98) * (1.0 - rim * 0.18);
-    // Frisch an der Düse noch warm angestrahlt
-    color = mix(vec3(1.0, 0.72, 0.42), color, smoothstep(0.0, 0.08, vAge));
-    float lit = earthShadow(vWorld, uSunDirection);
-    color = applySunlight(color, lit, 0.4);
-    float alpha = body * pow(1.0 - vAge, 1.3) * 0.7;
     gl_FragColor = vec4(color, alpha);
     #include <colorspace_fragment>
   }
@@ -171,11 +115,11 @@ export default function Rocket({ label = "Rakete", size = 0.06 }) {
   const flameMaterial = useRef();
   const glow = useRef();
   const glowMaterial = useRef();
-  const smoke = useRef();
   const scene = useThree((state) => state.scene);
   const style = useObjectStyle();
 
-  const smokeGeo = useMemo(() => smokeGeometry(), []);
+  // Rauchwolken in Erd-Koordinaten (Kind des Rahmens, dreht mit)
+  const smoke = useMemo(() => new SmokePool(900), []);
   const flameGeo = useMemo(() => {
     // Kegel mit Spitze nach unten, Düse bei y = 0
     const geometry = new THREE.ConeGeometry(0.07, 0.45, 16, 1, true);
@@ -191,13 +135,6 @@ export default function Rocket({ label = "Rakete", size = 0.06 }) {
   }, []);
   const flameUniforms = useMemo(() => ({ uTime: { value: 0 }, uPower: { value: 0 } }), []);
   const glowUniforms = useMemo(() => ({ uColor: { value: new THREE.Color("#ffc66e") }, uOpacity: { value: 0 } }), []);
-  const smokeUniforms = useMemo(
-    () => ({
-      uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) },
-      uSunDirection: { value: new THREE.Vector3(0, 0, 1) },
-    }),
-    []
-  );
   const state = useRef({
     phase: "pad",
     time: 0,
@@ -206,10 +143,6 @@ export default function Rocket({ label = "Rakete", size = 0.06 }) {
     boosterVelocity: new THREE.Vector3(),
     lastPos: new THREE.Vector3(),
     boosterSpin: new THREE.Vector3(),
-    smokeVelocity: Array.from({ length: SMOKE }, () => new THREE.Vector3()),
-    smokeLife: new Float32Array(SMOKE),
-    smokeAge: new Float32Array(SMOKE).fill(1),
-    nextSmoke: 0,
     smokeDebt: 0,
   });
 
@@ -237,18 +170,9 @@ export default function Rocket({ label = "Rakete", size = 0.06 }) {
       .multiplyScalar(1.002 + height);
   };
 
+  // Rauch wächst mit der Raketengrösse mit (Werte gelten für die Standardgrösse)
   const spawnSmoke = (s, from, velocity, size, life) => {
-    const i = s.nextSmoke;
-    s.nextSmoke = (s.nextSmoke + 1) % SMOKE;
-    smokeGeo.attributes.position.setXYZ(i, from.x, from.y, from.z);
-    smokeGeo.attributes.aSeed.setX(i, Math.random());
-    s.smokeVelocity[i].copy(velocity);
-    s.smokeLife[i] = life;
-    // Rauch wächst mit der Raketengrösse mit (Werte gelten für die Standardgrösse)
-    smokeGeo.attributes.aSize.setX(i, size * (c.size * style.scale) / 0.042);
-    smokeGeo.attributes.aSize.needsUpdate = true;
-    smokeGeo.attributes.aSeed.needsUpdate = true;
-    s.smokeAge[i] = 0;
+    smoke.spawn(from, velocity, (size * (c.size * style.scale)) / 0.042, life);
   };
 
   const place = (group, position, direction, scale) => {
@@ -268,25 +192,8 @@ export default function Rocket({ label = "Rakete", size = 0.06 }) {
     // Rahmen folgt der Erde (erst deren aktuelle Rotation übernehmen, sonst hinkt die Rakete nach)
     globe.updateWorldMatrix(true, false);
     frame.current.matrix.copy(globe.matrixWorld);
-    smoke.current.material.uniforms.uSunDirection.value.copy(globe.material.uniforms.uSunDirection.value);
-    flameMaterial.current.uniforms.uTime.value = clock.elapsedTime;
-
     // Rauch: treibt langsam auseinander, wird grösser und verblasst
-    const smokePos = smokeGeo.attributes.position;
-    for (let i = 0; i < SMOKE; i++) {
-      if (s.smokeAge[i] >= 1) continue;
-      s.smokeAge[i] = Math.min(1, s.smokeAge[i] + dt / s.smokeLife[i]);
-      s.smokeVelocity[i].multiplyScalar(1 - dt * 0.8);
-      smokePos.setXYZ(
-        i,
-        smokePos.getX(i) + s.smokeVelocity[i].x * dt,
-        smokePos.getY(i) + s.smokeVelocity[i].y * dt,
-        smokePos.getZ(i) + s.smokeVelocity[i].z * dt
-      );
-      smokeGeo.attributes.aAge.setX(i, s.smokeAge[i]);
-    }
-    smokePos.needsUpdate = true;
-    smokeGeo.attributes.aAge.needsUpdate = true;
+    smoke.update(dt, globe.material.uniforms.uSunDirection.value);
 
     let power = 0;
     let flameAt = 0;
@@ -436,15 +343,7 @@ export default function Rocket({ label = "Rakete", size = 0.06 }) {
           />
         </mesh>
       </Billboard>
-      <points ref={smoke} geometry={smokeGeo} frustumCulled={false}>
-        <shaderMaterial
-          vertexShader={smokeVertex}
-          fragmentShader={smokeFragment}
-          uniforms={smokeUniforms}
-          transparent
-          depthWrite={false}
-        />
-      </points>
+      <primitive object={smoke.points} />
     </group>
   );
 }
