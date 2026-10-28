@@ -25,6 +25,11 @@ function balloonProfile(segments = 48) {
   return points;
 }
 
+const DOWN = new THREE.Vector3(0, -1, 0);
+const toEarth = new THREE.Vector3();
+const swing = new THREE.Quaternion();
+const euler = new THREE.Euler();
+
 export default function Balloon() {
   const orbit = useRef();
   const body = useRef();
@@ -53,8 +58,8 @@ export default function Balloon() {
       shade: { value: 0.4, min: 0, max: 0.8, label: "Schattierung" },
       pigment: { value: 0.2, min: 0, max: 0.6, label: "Pigment-Wolken" },
       edge: { value: 0.4, min: 0, max: 1, label: "Pigmentrand" },
-      size: { value: 0.11, min: 0.02, max: 0.2, label: "Grösse" },
-      tilt: { value: -38, min: -90, max: 90, step: 1, label: "Neigung (°)" },
+      size: { value: 0.08, min: 0.02, max: 0.2, label: "Grösse" },
+      tilt: { value: 0, min: -45, max: 45, step: 1, label: "Neigung zusätzlich (°)" },
       angle: { value: -62, min: -180, max: 180, step: 1, label: "Position (°)" },
       height: { value: -0.45, min: -1.2, max: 1.2, label: "Höhe" },
       distance: { value: 1.35, min: 1.05, max: 2, label: "Abstand" },
@@ -83,8 +88,14 @@ export default function Balloon() {
       c.height + Math.sin(t * 0.8) * 0.012,
       Math.cos(a) * horizontal
     );
-    body.current.rotation.z = THREE.MathUtils.degToRad(c.tilt) + Math.sin(t * 0.6) * 0.05;
-    body.current.rotation.x = Math.sin(t * 0.45) * 0.04;
+    // Korb zeigt zur Erde: die -Y-Achse des Ballons auf den Erdmittelpunkt ausrichten,
+    // dazu etwas zusätzliche Neigung und leichtes Pendeln
+    toEarth.copy(body.current.position).negate().normalize();
+    body.current.quaternion.setFromUnitVectors(DOWN, toEarth);
+    swing.setFromEuler(
+      euler.set(Math.sin(t * 0.45) * 0.04, 0, THREE.MathUtils.degToRad(c.tilt) + Math.sin(t * 0.6) * 0.05)
+    );
+    body.current.quaternion.multiply(swing);
     body.current.scale.setScalar(c.size);
   });
 
