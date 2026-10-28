@@ -67,7 +67,6 @@ const Y = new THREE.Vector3(0, 1, 0);
 const crater = new THREE.Vector3();
 const velocity = new THREE.Vector3();
 const random = new THREE.Vector3();
-const worldUp = new THREE.Vector3();
 
 // Vulkan: raucht ständig ein wenig; in Abständen bricht er aus, mit Aschewolke, Glut und hellem Krater.
 // Hängt an der Erde und dreht mit.
@@ -96,6 +95,7 @@ export default function Volcano({ label = "Vulkan", size = 0.013 }) {
   const glowUniforms = useMemo(() => ({ uColor: { value: new THREE.Color("#ff9a4a") }, uOpacity: { value: 0 } }), []);
   const state = useRef({ time: 0 });
   const landColor = useMemo(() => new THREE.Color("#9a8bb4"), []);
+  const landNight = useMemo(() => new THREE.Color("#3b3470"), []);
 
   const c = useControls(
     label,
@@ -128,6 +128,7 @@ export default function Volcano({ label = "Vulkan", size = 0.013 }) {
     const k = scale / 0.042;
     // Farbe wie das Land der Erde, damit der Berg zu Sizilien gehört
     landColor.copy(globe.material.uniforms.uLandDay.value);
+    landNight.copy(globe.material.uniforms.uLandNight.value);
 
     // Ausbruch: schnell an, langsam ab
     const cycle = s.time % c.interval;
@@ -167,27 +168,25 @@ export default function Volcano({ label = "Vulkan", size = 0.013 }) {
       accelerate: (i, position, v, step) => v.addScaledVector(site.up, -scale * 4 * step),
     });
 
-    // Krater glüht: beim Ausbruch hell, sonst nachts schwach
-    worldUp.copy(site.up).transformDirection(globe.matrixWorld);
-    const night = 1 - THREE.MathUtils.smoothstep(worldUp.dot(sun), -0.15, 0.2);
+    // Krater glüht immer leicht, beim Ausbruch hell
     const flicker = 0.85 + 0.15 * Math.sin(clock.elapsedTime * 7.3) * Math.sin(clock.elapsedTime * 3.1);
     glow.current.position.copy(crater);
     glow.current.scale.setScalar(scale * (0.6 + 1.6 * strength) * flicker);
-    glowMaterial.current.uniforms.uOpacity.value = (0.25 * night + 0.9 * strength) * flicker;
+    glowMaterial.current.uniforms.uOpacity.value = (0.3 + 0.9 * strength) * flicker;
   });
 
   return (
     <group ref={frame} matrixAutoUpdate={false}>
       <group ref={mountain} position={site.up.clone()} quaternion={site.quaternion}>
         <mesh geometry={geometry}>
-          <Paint color={landColor} noiseScale={5} />
+          <Paint color={landColor} nightColor={landNight} noiseScale={5} />
         </mesh>
         {/* Lavaströme leuchten nachts */}
         {LAVA.map(({ angle, length, slope, x, y }) => (
           <group key={angle} rotation={[0, angle, 0]}>
             <mesh position={[x, y, 0]} rotation={[0, 0, -slope]}>
               <boxGeometry args={[length, 0.015, 0.03]} />
-              <Paint color="#c9604f" glow="#ffb04a" glowStrength={1} />
+              <Paint color="#c9604f" glow="#ffb04a" glowStrength={1} glowAlways />
             </mesh>
           </group>
         ))}

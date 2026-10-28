@@ -13,8 +13,9 @@ const fragmentShader = fragmentSource
 
 // Malmaterial als Kind eines Mesh: <mesh><Paint color="#…" /></mesh>
 // boxEdges: Kanten von Boxen mit einer dunkleren Pigmentlinie betonen
-// glow: Farbe, in der die Fläche nachts leuchtet (z. B. Fenster)
-export default function Paint({ color = "#ffffff", noiseScale = 3, boxEdges = false, glow = null, glowStrength = 0.9 }) {
+// glow: Farbe, in der die Fläche nachts leuchtet (z. B. Fenster); glowAlways: auch am Tag
+// nightColor: färbt sich wie das Land der Erde (color am Tag, nightColor in der Nacht)
+export default function Paint({ color = "#ffffff", noiseScale = 3, boxEdges = false, glow = null, glowStrength = 0.9, glowAlways = false, nightColor = null }) {
   const material = useRef();
   const scene = useThree((state) => state.scene);
   const style = useObjectStyle();
@@ -30,6 +31,10 @@ export default function Paint({ color = "#ffffff", noiseScale = 3, boxEdges = fa
       uBoxEdges: { value: 0 },
       uGlow: { value: new THREE.Color() },
       uGlowStrength: { value: 0 },
+      uGlowAlways: { value: 0 },
+      uLandLike: { value: 0 },
+      uNightColor: { value: new THREE.Color() },
+      uTerminator: { value: 0.15 },
     }),
     []
   );
@@ -48,6 +53,11 @@ export default function Paint({ color = "#ffffff", noiseScale = 3, boxEdges = fa
     u.uBoxEdges.value = boxEdges ? style.boxEdges : 0;
     if (glow) u.uGlow.value.set(glow);
     u.uGlowStrength.value = glow ? glowStrength : 0;
+    u.uGlowAlways.value = glowAlways ? 1 : 0;
+    u.uLandLike.value = nightColor ? 1 : 0;
+    if (nightColor) u.uNightColor.value.set(nightColor);
+    const terminator = globe?.material.uniforms.uTerminatorSoftness;
+    if (terminator) u.uTerminator.value = terminator.value;
   });
 
   return (

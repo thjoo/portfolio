@@ -10,6 +10,10 @@ uniform float uNoiseScale;
 uniform float uBoxEdges;
 uniform vec3 uGlow;
 uniform float uGlowStrength;
+uniform float uGlowAlways;   // 1 = leuchtet auch am Tag (Lava)
+uniform float uLandLike;     // 1 = färbt sich wie das Land der Erde: Tag- und Nachtfarbe statt Licht und Schatten
+uniform vec3 uNightColor;
+uniform float uTerminator;
 
 varying vec3 vNormalW;
 varying vec3 vViewDir;
@@ -28,7 +32,14 @@ void main() {
 
   // Sonne wie bei der Erde: Sonnenseite hell, Schattenseite und Erdschatten dunkel
   float lit = sunLit(normal, vWorld, uSunDirection);
-  color = applySunlight(color, lit, uShade);
+  if (uLandLike > 0.5) {
+    // Wie die Erdoberfläche: Tag/Nacht nach der Lage auf der Kugel, Flanken nur leicht schattiert (Relief)
+    float day = smoothstep(-uTerminator, uTerminator, dot(normalize(vWorld), normalize(uSunDirection)));
+    float relief = mix(0.82, 1.08, smoothstep(-0.35, 0.55, dot(normal, normalize(uSunDirection))));
+    color = mix(uNightColor * vTint, color * relief, day);
+  } else {
+    color = applySunlight(color, lit, uShade);
+  }
   color *= 1.0 + fbm(p * 1.5 + 2.0) * uPigment;
   color *= 1.0 + (snoise(p * 40.0) * 0.6 + snoise(p * 13.0) * 0.4) * uGranulation;
 
@@ -43,7 +54,7 @@ void main() {
 
   // Nachts leuchten (Fenster …): nur dort, wo die Erde zwischen Objekt und Sonne liegt
   float night = 1.0 - earthShadow(vWorld, uSunDirection);
-  color = mix(color, uGlow, night * uGlowStrength);
+  color = mix(color, uGlow, max(night, uGlowAlways) * uGlowStrength);
 
   gl_FragColor = vec4(color, 1.0);
   #include <tonemapping_fragment>
