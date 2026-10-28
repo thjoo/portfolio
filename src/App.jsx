@@ -67,6 +67,7 @@ function Post() {
     u.get("uEarthFollow").value = earth.follow ? 1 : 0;
     u.get("uInverseProjection").value.copy(camera.projectionMatrixInverse);
     u.get("uCameraWorld").value.copy(camera.matrixWorld);
+    u.get("uViewMatrix").value.copy(camera.matrixWorldInverse);
     const globe = scene.getObjectByName("globe");
     if (globe) {
       u.get("uGlobeInverse").value.copy(globe.matrixWorld).invert();
@@ -80,6 +81,7 @@ function Post() {
       u.get("uScribbleDensity").value = g.uScribbleDensity.value;
       u.get("uIceCoast").value = g.uIceCoast.value;
       u.get("uScribbleWidth").value = g.uScribbleWidth.value * state.gl.getPixelRatio();
+      u.get("uIceThickness").value = g.uIceThickness.value * state.gl.getPixelRatio();
       u.get("uIceColor").value.copy(g.uIce.value);
       u.get("uSunDirection").value.copy(g.uSunDirection.value);
     }

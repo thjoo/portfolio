@@ -37,6 +37,8 @@ const fragmentShader = /* glsl */ `
   uniform float uScribbleDensity;
   uniform float uIceCoast;
   uniform float uScribbleWidth;
+  uniform float uIceThickness;
+  uniform mat4 uViewMatrix;
   uniform vec3 uIceColor;
   uniform vec3 uSunDirection;
 
@@ -82,17 +84,35 @@ const fragmentShader = /* glsl */ `
       // Eis = gekritzeltes Knäuel über jedem Pol. Grösse je nach Jahreszeit (0 Sommer, 1 Winter)
       float pole = local.y > 0.0 ? 1.0 : -1.0;
       float radiusDeg = pole > 0.0 ? mix(13.0, 30.0, uIceNorth) : mix(24.0, 35.0, uIceSouth);
-      float pressure = scribbleBall(local, pole, radiusDeg, 42.0 * uScribbleDensity, uScribbleWidth, uIceIrregular);
-      if (pressure > 0.0) {
-        float sun = dot(normalize(world.xyz), normalize(uSunDirection));
-        float light = 0.85 + 0.25 * smoothstep(-0.2, 0.2, sun);
-        // Über Landeis etwas weniger Druck, damit die Antarktis durchscheint
-        float landIce = smoothstep(0.3, 0.7, landTexel.r) * step(0.97, landTexel.a);
-        pressure *= mix(1.0, 0.92, landIce);
-        float tooth = crayonTooth(local, uEarthScale * 0.7);
-        float scribble = crayonDeposit(pressure, tooth);
-        color = mix(color, uIceColor * light * 1.05, clamp(scribble * uScribble, 0.0, 1.0));
-      }
+      // Dicke: Schatten fällt von der Sonne weg; dafür die Sonnenrichtung in die Pol-Koordinaten bringen
+      vec3 sunLocal = normalize(mat3(uGlobeInverse) * normalize(uSunDirection));
+      vec2 sunQ = vec2(sunLocal.x, sunLocal.z * pole);
+      vec2 shadowDir = sunQ / max(length(sunQ), 1e-3) * clamp(length(sunQ) * 3.0, 0.0, 1.0);
+      float shadowPressure;
+      float pressure = scribbleBall(local, pole, radiusDeg, 42.0 * uScribbleDensity, uScribbleWidth, uIceIrregular,
+                                    shadowDir, uIceThickness, shadowPressure);
+      float tooth = crayonTooth(local, uEarthScale * 0.7);
+      float sun = dot(normalize(world.xyz), normalize(uSunDirection));
+      float light = 0.85 + 0.25 * smoothstep(-0.2, 0.2, sun);
+      // Über Landeis etwas weniger Druck, damit die Antarktis durchscheint
+      float landIce = smoothstep(0.3, 0.7, landTexel.r) * step(0.97, landTexel.a);
+      pressure *= mix(1.0, 0.92, landIce);
+      float scribble = crayonDeposit(pressure, tooth) * uScribble;
+      float shadowCover = crayonDeposit(shadowPressure, tooth * 0.3) * uScribble;
+
+      // Schlagschatten auf dem Untergrund: weich, dunkler und violett getönt
+      float castShadow = shadowCover * (1.0 - scribble);
+      color = mix(color, color * vec3(0.5, 0.45, 0.78), castShadow * 0.65 * (0.5 + 0.5 * light));
+
+      // Relief der Kreide am weichen Druckverlauf (nicht am Korn): Kanten zur Sonne glänzen,
+      // abgewandte fallen dunkel ab -> die Schicht wirkt aufgetragen und dick
+      vec2 sunScreen = (uViewMatrix * vec4(normalize(uSunDirection), 0.0)).xy;
+      sunScreen /= max(length(sunScreen), 1e-3);
+      float height = smoothstep(0.05, 0.75, pressure);
+      vec2 grad = vec2(dFdx(height), dFdy(height)) * uScribbleWidth;
+      float relief = clamp(-dot(grad, sunScreen) * 1.2, -1.0, 1.0) * clamp(uIceThickness / 5.0, 0.0, 2.0);
+      vec3 iceColor = uIceColor * light * 1.05 * (1.0 + relief * 0.4);
+      color = mix(color, iceColor, clamp(scribble, 0.0, 1.0));
     }
 
     float earth;
@@ -121,7 +141,7 @@ export class PaperEffect extends Effect {
         ]
           .map((name) => [name, new Uniform(0)])
           .concat(
-            ["uInverseProjection", "uCameraWorld", "uGlobeInverse"].map((name) => [
+            ["uInverseProjection", "uCameraWorld", "uGlobeInverse", "uViewMatrix"].map((name) => [
               name,
               new Uniform(new Matrix4()),
             ]),
@@ -134,6 +154,7 @@ export class PaperEffect extends Effect {
               ["uScribbleDensity", new Uniform(1)],
               ["uIceCoast", new Uniform(0)],
               ["uScribbleWidth", new Uniform(1.6)],
+              ["uIceThickness", new Uniform(4)],
               ["uIceColor", new Uniform(new Color())],
               ["uSunDirection", new Uniform(new Vector3(0, 0, 1))],
             ]
