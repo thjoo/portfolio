@@ -104,7 +104,45 @@ export default function App() {
         <Background />
         <Stars />
         <Globe />
-        <Balloon />
+        <Balloon label="Ballon Klassik" shape="classic" stripeA="#5b7fe2" stripeB="#e8dfb4" angle={-62} height={-0.45} />
+        <Balloon
+          label="Ballon Zwiebel"
+          shape="onion"
+          stripeA="#d9614c"
+          stripeB="#f2c46b"
+          stripes={10}
+          size={0.07}
+          angle={68}
+          height={0.5}
+          distance={1.38}
+          phase={2.1}
+        />
+        <Balloon
+          label="Ballon Schlank"
+          shape="slim"
+          stripeA="#3fa7a0"
+          stripeB="#efe2bf"
+          stripes={6}
+          size={0.06}
+          angle={-28}
+          height={0.92}
+          distance={1.4}
+          phase={4.3}
+        />
+        <Balloon
+          label="Wetterballon"
+          kind="weather"
+          shape="weather"
+          stripeA="#e9ecf8"
+          stripeB="#e9ecf8"
+          stripes={0}
+          size={0.065}
+          angle={40}
+          height={-0.85}
+          distance={1.45}
+          phase={1.3}
+          payloadColor="#e9874a"
+        />
         <OrbitControls enablePan={false} minDistance={2} maxDistance={14} />
         <FitCamera />
         <Post />

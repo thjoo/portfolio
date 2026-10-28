@@ -40,9 +40,11 @@ void main() {
   float mixVariation = (hash(index + 3.0) - 0.5) * 0.18;
   own *= 1.0 + mixVariation;
   vec3 color = mix(mix(own, other, 0.5), own, edgeA);
+  // Ohne Streifen (Wetterballon): einfarbig
+  if (uStripes < 0.5) color = uStripeA * (1.0 + (snoise(p * 0.8) * 0.05));
 
   // Pigmentrand: Farbe sammelt sich beim Trocknen an der Streifengrenze
-  float border = 1.0 - smoothstep(0.0, 0.12, min(local, 1.0 - local));
+  float border = (1.0 - smoothstep(0.0, 0.12, min(local, 1.0 - local))) * step(0.5, uStripes);
   color *= 1.0 - border * uEdge * 0.45 * (0.6 + 0.4 * abs(snoise(p * 8.0)));
 
   // Weiches Licht von der Sonne (umwickelt, die Schattenseite wird nicht schwarz)
