@@ -11,19 +11,22 @@ uniform float uBoxEdges;
 
 varying vec3 vNormalW;
 varying vec3 vViewDir;
+varying vec3 vWorld;
 varying vec3 vPosition;
 varying vec3 vTint;
 varying vec2 vUv;
 
 #include ./noise.glsl
+#include ./sunlight.glsl
 
 void main() {
   vec3 p = vPosition * uNoiseScale;
   vec3 normal = normalize(vNormalW);
   vec3 color = uColor * vTint;
 
-  float diffuse = dot(normal, normalize(uSunDirection)) * 0.5 + 0.5;
-  color *= mix(1.0 - uShade, 1.0 + uShade * 0.2, smoothstep(0.1, 0.9, diffuse));
+  // Sonne wie bei der Erde: Sonnenseite hell, Schattenseite und Erdschatten dunkel
+  float lit = sunLit(normal, vWorld, uSunDirection);
+  color = applySunlight(color, lit, uShade);
   color *= 1.0 + fbm(p * 1.5 + 2.0) * uPigment;
   color *= 1.0 + (snoise(p * 40.0) * 0.6 + snoise(p * 13.0) * 0.4) * uGranulation;
 

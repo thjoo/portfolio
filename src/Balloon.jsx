@@ -7,9 +7,13 @@ import * as THREE from "three";
 import vertexSource from "./shaders/balloon.vert?raw";
 import fragmentSource from "./shaders/balloon.frag?raw";
 import noise from "./shaders/noise.glsl?raw";
+import sunlight from "./shaders/sunlight.glsl?raw";
+import Paint from "./Paint.jsx";
 
 const vertexShader = vertexSource.replace("#include ./noise.glsl", noise);
-const fragmentShader = fragmentSource.replace("#include ./noise.glsl", noise);
+const fragmentShader = fragmentSource
+  .replace("#include ./noise.glsl", noise)
+  .replace("#include ./sunlight.glsl", sunlight);
 
 // Formen der Hülle für LatheGeometry
 // height: Höhe der Hülle, base: Breite unten (0 spitz, 1 kugelig), power: wie schnell sie unten schmal wird,
@@ -175,7 +179,7 @@ export default function Balloon({
               ))}
               <mesh position={[0, payloadY, 0]}>
                 <boxGeometry args={payloadSize} />
-                <meshBasicMaterial color={payloadColor} />
+                <Paint color={payloadColor} boxEdges />
               </mesh>
             </group>
           </group>

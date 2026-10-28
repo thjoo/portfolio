@@ -3,10 +3,12 @@ uniform float uTime;
 uniform vec3 uColor;
 uniform float uOpacity;
 uniform sampler2D uLand;
+uniform vec3 uSunDirection;
 
 varying vec2 vUv;
 varying float vArm;
 varying vec3 vLocal;
+varying vec3 vWorld;
 
 #include ./noise.glsl
 
@@ -32,6 +34,9 @@ void main() {
   float alpha = band * broken * fade * uOpacity * (1.0 - land);
   if (alpha < 0.01) discard;
 
-  gl_FragColor = vec4(uColor, alpha);
+  // Auf der Nachtseite der Erde ist auch der Schaum dunkel
+  float day = smoothstep(-0.15, 0.2, dot(normalize(vWorld), normalize(uSunDirection)));
+  vec3 color = mix(uColor * vec3(0.3, 0.28, 0.46), uColor, day);
+  gl_FragColor = vec4(color, alpha * mix(0.55, 1.0, day));
   #include <colorspace_fragment>
 }

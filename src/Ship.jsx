@@ -280,6 +280,7 @@ export default function Ship({ label = "Containerschiff", model = "container", w
       uColor: { value: new THREE.Color("#f2f0ff") },
       uOpacity: { value: 0.8 },
       uLand: { value: null },
+      uSunDirection: { value: new THREE.Vector3(0, 0, 1) },
     }),
     []
   );
@@ -343,6 +344,7 @@ export default function Ship({ label = "Containerschiff", model = "container", w
     positions.needsUpdate = true;
     wake.current.material.uniforms.uTime.value = state.clock.elapsedTime;
     wake.current.material.uniforms.uLand.value = globe.material.uniforms.uLand.value;
+    wake.current.material.uniforms.uSunDirection.value.copy(globe.material.uniforms.uSunDirection.value);
   });
 
   return (

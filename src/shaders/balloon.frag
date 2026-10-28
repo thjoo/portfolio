@@ -13,9 +13,11 @@ uniform float uGranulation;
 varying vec2 vUv;
 varying vec3 vNormalW;
 varying vec3 vViewDir;
+varying vec3 vWorld;
 varying vec3 vPosition;
 
 #include ./noise.glsl
+#include ./sunlight.glsl
 
 float hash(float n) {
   return fract(sin(n * 91.7 + 13.3) * 43758.5453);
@@ -48,13 +50,14 @@ void main() {
   color *= 1.0 - border * uEdge * 0.45 * (0.6 + 0.4 * abs(snoise(p * 8.0)));
 
   // Weiches Licht von der Sonne (umwickelt, die Schattenseite wird nicht schwarz)
-  float diffuse = dot(normal, normalize(uSunDirection)) * 0.5 + 0.5;
-  color *= mix(1.0 - uShade, 1.0 + uShade * 0.2, smoothstep(0.1, 0.9, diffuse));
+  // Sonne wie bei der Erde: Sonnenseite hell, Schattenseite und Erdschatten dunkel
+  float lit = sunLit(normal, vWorld, uSunDirection);
+  color = applySunlight(color, lit, uShade);
 
   // Ausgesparte Papierstelle: auf der Sonnenseite bleibt das Papier fast weiss
   vec3 halfway = normalize(normalize(uSunDirection) + viewDir);
   float highlight = smoothstep(0.82, 0.97, dot(normal, halfway) + snoise(p * 3.0) * 0.06);
-  color = mix(color, vec3(0.96, 0.95, 1.0), highlight * 0.75);
+  color = mix(color, vec3(0.96, 0.95, 1.0), highlight * 0.75 * earthShadow(vWorld, uSunDirection));
 
   // Pigment-Wolken und Körnung
   color *= 1.0 + fbm(p * 1.4 + 2.0) * uPigment;

@@ -99,7 +99,9 @@ const fragmentShader = /* glsl */ `
                                     shadowDir, uIceThickness, shadowPressure);
       float tooth = crayonTooth(local, uEarthScale * 0.7);
       float sun = dot(normalize(world.xyz), normalize(uSunDirection));
-      float light = 0.85 + 0.25 * smoothstep(-0.2, 0.2, sun);
+      // Wie die Erde: auf der Nachtseite dunkel und kühl, im Tag hell
+      float day = smoothstep(-0.15, 0.2, sun);
+      float light = mix(0.34, 1.08, day);
       // Über Landeis etwas weniger Druck, damit die Antarktis durchscheint
       float landIce = smoothstep(0.3, 0.7, landTexel.r) * step(0.97, landTexel.a);
       pressure *= mix(1.0, 0.92, landIce);
@@ -117,7 +119,7 @@ const fragmentShader = /* glsl */ `
       float height = smoothstep(0.05, 0.75, pressure);
       vec2 grad = vec2(dFdx(height), dFdy(height)) * uScribbleWidth;
       float relief = clamp(-dot(grad, sunScreen) * 1.2, -1.0, 1.0) * clamp(uIceThickness / 5.0, 0.0, 2.0);
-      vec3 iceColor = uIceColor * light * 1.05 * (1.0 + relief * 0.4);
+      vec3 iceColor = uIceColor * light * mix(vec3(0.82, 0.8, 1.0), vec3(1.0), day) * (1.0 + relief * 0.4 * (0.3 + 0.7 * day));
       color = mix(color, iceColor, clamp(scribble, 0.0, 1.0));
     }
 

@@ -3,6 +3,7 @@ uniform float uOutlineWobble;
 varying vec2 vUv;
 varying vec3 vNormalW;
 varying vec3 vViewDir;
+varying vec3 vWorld;
 varying vec3 vPosition;
 
 #include ./noise.glsl
@@ -14,6 +15,7 @@ void main() {
   vUv = uv;
   vPosition = position;
   vNormalW = normalize(mat3(modelMatrix) * normal);
+  vWorld = worldPosition.xyz;
   vViewDir = normalize(cameraPosition - worldPosition.xyz);
   gl_Position = projectionMatrix * viewMatrix * worldPosition;
 }

@@ -1,6 +1,7 @@
 // Malmaterial für Objekte; unterstützt InstancedMesh mit eigener Farbe je Instanz
 varying vec3 vNormalW;
 varying vec3 vViewDir;
+varying vec3 vWorld;
 varying vec3 vPosition;
 varying vec3 vTint;
 varying vec2 vUv;
@@ -20,6 +21,7 @@ void main() {
   vec4 worldPosition = modelMatrix * local;
   vPosition = local.xyz;
   vNormalW = normalize(mat3(modelMatrix) * n);
+  vWorld = worldPosition.xyz;
   vViewDir = normalize(cameraPosition - worldPosition.xyz);
   gl_Position = projectionMatrix * viewMatrix * worldPosition;
 }

@@ -5,8 +5,11 @@ import { useObjectStyle } from "./objectStyle.js";
 import vertexSource from "./shaders/paint.vert?raw";
 import fragmentSource from "./shaders/paint.frag?raw";
 import noise from "./shaders/noise.glsl?raw";
+import sunlight from "./shaders/sunlight.glsl?raw";
 
-const fragmentShader = fragmentSource.replace("#include ./noise.glsl", noise);
+const fragmentShader = fragmentSource
+  .replace("#include ./noise.glsl", noise)
+  .replace("#include ./sunlight.glsl", sunlight);
 
 // Malmaterial als Kind eines Mesh: <mesh><Paint color="#…" /></mesh>
 // boxEdges: Kanten von Boxen mit einer dunkleren Pigmentlinie betonen
