@@ -3,7 +3,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useControls } from "leva";
 import * as THREE from "three";
 import Paint from "./Paint.jsx";
-import { createRoute } from "./route.js";
+import { createRoute, findLandOnRoute } from "./route.js";
 import wakeVertex from "./shaders/wake.vert?raw";
 import wakeFragmentSource from "./shaders/wake.frag?raw";
 import noise from "./shaders/noise.glsl?raw";
@@ -261,6 +261,7 @@ export default function Ship({ label = "Containerschiff", model = "container", w
   const scene = useThree((state) => state.scene);
   const route = useMemo(() => createRoute(waypoints), [waypoints]);
   const progress = useRef({ t: start, direction: 1 });
+  const checked = useRef(false);
 
   const c = useControls(
     label,
@@ -274,7 +275,12 @@ export default function Ship({ label = "Containerschiff", model = "container", w
 
   const wakeGeo = useMemo(() => wakeGeometry(), []);
   const wakeUniforms = useMemo(
-    () => ({ uTime: { value: 0 }, uColor: { value: new THREE.Color("#f2f0ff") }, uOpacity: { value: 0.8 } }),
+    () => ({
+      uTime: { value: 0 },
+      uColor: { value: new THREE.Color("#f2f0ff") },
+      uOpacity: { value: 0.8 },
+      uLand: { value: null },
+    }),
     []
   );
 
@@ -282,6 +288,13 @@ export default function Ship({ label = "Containerschiff", model = "container", w
     const globe = scene.getObjectByName("globe");
     if (!globe) return;
     // Rahmen folgt der Erde: alles darin ist in Erd-Koordinaten (Einheitskugel)
+    // In der Entwicklung einmal prüfen, ob die Route über Land führt
+    if (import.meta.env.DEV && !checked.current && globe.material.uniforms.uLand.value) {
+      checked.current = true;
+      const hits = findLandOnRoute(route, globe.material.uniforms.uLand.value);
+      if (hits.length) console.warn(`Route von "${label}" führt über Land, z. B. bei`, hits.slice(0, 5));
+    }
+
     // Erst die aktuelle Rotation der Erde übernehmen, sonst hinkt das Schiff ein Bild hinterher
     globe.updateWorldMatrix(true, false);
     frame.current.matrix.copy(globe.matrixWorld);
@@ -329,6 +342,7 @@ export default function Ship({ label = "Containerschiff", model = "container", w
     });
     positions.needsUpdate = true;
     wake.current.material.uniforms.uTime.value = state.clock.elapsedTime;
+    wake.current.material.uniforms.uLand.value = globe.material.uniforms.uLand.value;
   });
 
   return (

@@ -18,13 +18,19 @@ const ATLANTIC_ROUTE = [
   [49.6, -4.0],
 ];
 
-// Karibik: Miami -> Bahamas -> Puerto Rico -> Kleine Antillen
+// Karibik: Miami -> Providence-Kanal (Bahamas) -> nördlich an Hispaniola und Puerto Rico vorbei
+// -> Kleine Antillen. Geprüft gegen die Landmaske (kein Land, auch nicht 0.2° daneben)
 const CARIBBEAN_ROUTE = [
-  [25.6, -79.6],
-  [22.5, -74.5],
-  [19.2, -67.5],
-  [15.5, -62.0],
-  [12.8, -60.2],
+  [25.9, -79.7],
+  [26.0, -78.4],
+  [25.9, -76.9],
+  [24.8, -73.5],
+  [21.0, -69.5],
+  [19.4, -66.2],
+  [18.6, -64.0],
+  [16.5, -62.6],
+  [14.5, -61.6],
+  [12.6, -60.5],
 ];
 
 // Südatlantik: Kapstadt -> Rio de Janeiro

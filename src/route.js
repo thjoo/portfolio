@@ -41,3 +41,22 @@ function slerpVectors(a, b, f, target) {
     .addScaledVector(b, Math.sin(f * angle) / s)
     .normalize();
 }
+
+// Prüft eine Route gegen die Landmaske (R-Kanal der Landtextur) und liefert die Stellen über Land.
+// Gedacht für die Entwicklung: neue Routen sofort kontrollieren.
+export function findLandOnRoute(route, landTexture, samples = 1500) {
+  const { data, width, height } = landTexture.image;
+  const hits = [];
+  const v = new THREE.Vector3();
+  for (let i = 0; i <= samples; i++) {
+    route.sample(i / samples, v);
+    const lat = 90 - THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(v.y, -1, 1)));
+    let lon = THREE.MathUtils.radToDeg(Math.atan2(v.z, -v.x)) - 180;
+    if (lon < -180) lon += 360;
+    const x = Math.floor(((lon + 180) / 360) * width) % width;
+    // Die Textur ist mit flipY hochgeladen; die Daten liegen von oben (Nordpol) nach unten
+    const y = Math.floor(((90 - lat) / 180) * height);
+    if (data[(y * width + x) * 4] > 100) hits.push([+lat.toFixed(2), +lon.toFixed(2)]);
+  }
+  return hits;
+}
