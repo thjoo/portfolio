@@ -9,7 +9,8 @@ import noise from "./shaders/noise.glsl?raw";
 const fragmentShader = fragmentSource.replace("#include ./noise.glsl", noise);
 
 // Malmaterial als Kind eines Mesh: <mesh><Paint color="#…" /></mesh>
-export default function Paint({ color = "#ffffff", noiseScale = 3 }) {
+// boxEdges: Kanten von Boxen mit einer dunkleren Pigmentlinie betonen
+export default function Paint({ color = "#ffffff", noiseScale = 3, boxEdges = false }) {
   const material = useRef();
   const scene = useThree((state) => state.scene);
   const style = useObjectStyle();
@@ -22,6 +23,7 @@ export default function Paint({ color = "#ffffff", noiseScale = 3 }) {
       uEdge: { value: 0.4 },
       uGranulation: { value: 0.06 },
       uNoiseScale: { value: 3 },
+      uBoxEdges: { value: 0 },
     }),
     []
   );
@@ -37,6 +39,7 @@ export default function Paint({ color = "#ffffff", noiseScale = 3 }) {
     u.uEdge.value = style.edge;
     u.uGranulation.value = style.granulation;
     u.uNoiseScale.value = noiseScale;
+    u.uBoxEdges.value = boxEdges ? style.boxEdges : 0;
   });
 
   return (

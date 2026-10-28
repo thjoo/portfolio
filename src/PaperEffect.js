@@ -12,6 +12,8 @@ import ice from "./shaders/ice.glsl?raw";
 // Derselbe Punkt dient für das Gekritzel im Eis, das hier nach Kuwahara scharf bleibt.
 const fragmentShader = /* glsl */ `
   uniform float uDistortion;
+  uniform sampler2D uSharp;
+  uniform float uObjectSharp;
   uniform float uAspect;
 
   uniform float uBgScale;
@@ -128,6 +130,10 @@ const fragmentShader = /* glsl */ `
     // Auf der Erde sammelt sich Pigment in den Papiertälern: Täler dunkler als Erhebungen hell
     earth = earth < 0.0 ? earth * uEarthPooling : earth * (2.0 - uEarthPooling) * 0.5;
 
+    // Objekte vor der Erde (Schiffe, Ballone) aus dem Bild vor Kuwahara: Kanten bleiben klar
+    float isObject = isEarth * (1.0 - onGlobe);
+    color = mix(color, texture2D(uSharp, uv).rgb, isObject * uObjectSharp);
+
     float h = mix(bg, earth, isEarth);
     outputColor = vec4(color * (1.0 + h), inputColor.a);
   }
@@ -151,6 +157,8 @@ export class PaperEffect extends Effect {
             ]),
             [
               ["uLand", new Uniform(null)],
+              ["uSharp", new Uniform(null)],
+              ["uObjectSharp", new Uniform(0)],
               ["uIceNorth", new Uniform(0)],
               ["uIceSouth", new Uniform(0)],
               ["uIceIrregular", new Uniform(0)],

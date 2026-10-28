@@ -7,11 +7,13 @@ uniform float uPigment;
 uniform float uEdge;
 uniform float uGranulation;
 uniform float uNoiseScale;
+uniform float uBoxEdges;
 
 varying vec3 vNormalW;
 varying vec3 vViewDir;
 varying vec3 vPosition;
 varying vec3 vTint;
+varying vec2 vUv;
 
 #include ./noise.glsl
 
@@ -27,6 +29,12 @@ void main() {
 
   float rim = pow(1.0 - max(dot(normal, normalize(vViewDir)), 0.0), 2.2);
   color *= 1.0 - rim * uEdge * 0.6;
+
+  // Kanten betonen (für Boxen: UV pro Fläche 0..1): dunklere, leicht unregelmässige Pigmentlinie
+  float toEdge = min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y));
+  float edgeWidth = 0.07 + 0.03 * snoise(p * 9.0);
+  float edgeLine = 1.0 - smoothstep(edgeWidth * 0.4, edgeWidth, toEdge);
+  color *= 1.0 - edgeLine * uBoxEdges * 0.5;
 
   gl_FragColor = vec4(color, 1.0);
   #include <tonemapping_fragment>

@@ -10,6 +10,7 @@ export function useObjectStyle() {
       edge: { value: 0.55, min: 0, max: 1, label: "Pigmentrand" },
       bleed: { value: 0.22, min: 0.02, max: 0.5, label: "Streifen verlaufen" },
       granulation: { value: 0.06, min: 0, max: 0.2, label: "Körnung" },
+      boxEdges: { value: 1, min: 0, max: 1.5, label: "Kanten betonen" },
       outlineWobble: { value: 0.025, min: 0, max: 0.08, label: "Umriss wackelig" },
       swingAmount: { value: 7, min: 0, max: 25, label: "Pendeln (°)" },
       swingSpeed: { value: 1, min: 0.1, max: 3, label: "Pendeln Tempo" },

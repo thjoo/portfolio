@@ -3,11 +3,13 @@ varying vec3 vNormalW;
 varying vec3 vViewDir;
 varying vec3 vPosition;
 varying vec3 vTint;
+varying vec2 vUv;
 
 void main() {
   vec4 local = vec4(position, 1.0);
   vec3 n = normal;
   vTint = vec3(1.0);
+  vUv = uv;
   #ifdef USE_INSTANCING
     local = instanceMatrix * local;
     n = mat3(instanceMatrix) * n;

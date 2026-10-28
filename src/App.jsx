@@ -19,6 +19,7 @@ const ATLANTIC_ROUTE = [
 ];
 import Background from "./Background.jsx";
 import { PaperEffect } from "./PaperEffect.js";
+import { CopyPass } from "postprocessing";
 
 // Kamera-Abstand so wählen, dass die Kugel auch im Hochformat ganz sichtbar bleibt
 function FitCamera() {
@@ -38,12 +39,18 @@ function Post() {
   const camera = useThree((state) => state.camera);
   const scene = useThree((state) => state.scene);
   const paper = useMemo(() => new PaperEffect(), []);
+  // Bild vor Kuwahara merken: Objekte (Schiffe, Ballone) werden daraus wieder scharf
+  const sharp = useMemo(
+    () => new CopyPass(new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, depthBuffer: false })),
+    []
+  );
 
   const p = useControls("Nachbearbeitung", {
     kuwahara: { value: true, label: "Kuwahara an" },
     radius: { value: 4, min: 1, max: 12, step: 1, label: "Pinsel-Radius" },
     sectors: { value: 8, min: 2, max: 8, step: 1, label: "Sektoren" },
     distortion: { value: 0.003, min: 0, max: 0.02, label: "Verzerrung" },
+    objectSharp: { value: 0.85, min: 0, max: 1, label: "Objekte scharf" },
   });
 
   const bg = useControls("Papier Hintergrund", {
@@ -65,6 +72,8 @@ function Post() {
   useFrame((state) => {
     const u = paper.uniforms;
     u.get("uDistortion").value = p.distortion;
+    u.get("uSharp").value = sharp.texture;
+    u.get("uObjectSharp").value = p.objectSharp;
     u.get("uAspect").value = size.width / size.height;
     u.get("uBgScale").value = bg.scale;
     u.get("uBgFibers").value = bg.fibers;
@@ -100,6 +109,7 @@ function Post() {
 
   return (
     <EffectComposer multisampling={0}>
+      <primitive object={sharp} />
       {p.kuwahara && <Kuwahara radius={p.radius} sectorCount={p.sectors} />}
       <primitive object={paper} />
     </EffectComposer>

@@ -1,10 +1,14 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Line } from "@react-three/drei";
 import { useControls } from "leva";
 import * as THREE from "three";
 import Paint from "./Paint.jsx";
 import { createRoute } from "./route.js";
+import wakeVertex from "./shaders/wake.vert?raw";
+import wakeFragmentSource from "./shaders/wake.frag?raw";
+import noise from "./shaders/noise.glsl?raw";
+
+const wakeFragment = wakeFragmentSource.replace("#include ./noise.glsl", noise);
 
 // Containerschiff: Bug zeigt nach +x, oben ist +y, Breite entlang z. Länge etwa 2.1 Einheiten.
 const CONTAINER_COLORS = ["#d9614c", "#f2c46b", "#5fae7a", "#efe8d8", "#e9874a", "#4fb3c9", "#c8506e", "#7d8fe0"];
@@ -71,7 +75,7 @@ function Containers({ seed = 7 }) {
   return (
     <instancedMesh ref={mesh} args={[null, null, boxes.length]}>
       <boxGeometry args={[0.092, 0.058, 0.062]} />
-      <Paint color="#ffffff" noiseScale={8} />
+      <Paint color="#ffffff" noiseScale={8} boxEdges />
     </instancedMesh>
   );
 }
@@ -86,41 +90,70 @@ function ContainerShipModel() {
       {/* Deck */}
       <mesh position={[0.05, 0.165, 0]}>
         <boxGeometry args={[1.9, 0.01, 0.36]} />
-        <Paint color="#4f6fd6" />
+        <Paint color="#4f6fd6" boxEdges />
       </mesh>
       <Containers />
       {/* Brücke am Heck */}
       <mesh position={[-0.82, 0.33, 0]}>
         <boxGeometry args={[0.16, 0.34, 0.34]} />
-        <Paint color="#efeaf6" />
+        <Paint color="#efeaf6" boxEdges />
       </mesh>
       <mesh position={[-0.82, 0.47, 0]}>
         <boxGeometry args={[0.18, 0.04, 0.4]} />
-        <Paint color="#efeaf6" />
+        <Paint color="#efeaf6" boxEdges />
       </mesh>
       {/* Schornstein */}
       <mesh position={[-0.93, 0.44, 0]}>
         <boxGeometry args={[0.06, 0.14, 0.08]} />
-        <Paint color="#d9614c" />
+        <Paint color="#d9614c" boxEdges />
       </mesh>
     </group>
   );
 }
 
-const WAKE_POINTS = 18;
+const WAKE_POINTS = 24;
+// Drei Schaumbänder: links, rechts (V-förmig auseinander) und eine kurze Spur in der Mitte
+const WAKE_ARMS = [
+  { spread: -0.38, width: [0.05, 0.16], length: 1 },
+  { spread: 0.38, width: [0.05, 0.16], length: 1 },
+  { spread: 0, width: [0.1, 0.22], length: 0.55 },
+];
+
+function wakeGeometry() {
+  const vertexCount = WAKE_ARMS.length * WAKE_POINTS * 2;
+  const geometry = new THREE.BufferGeometry();
+  const uvs = new Float32Array(vertexCount * 2);
+  const arms = new Float32Array(vertexCount);
+  const indices = [];
+  WAKE_ARMS.forEach((_, a) => {
+    for (let i = 0; i < WAKE_POINTS; i++) {
+      const v = (a * WAKE_POINTS + i) * 2;
+      const f = i / (WAKE_POINTS - 1);
+      uvs.set([f, 0, f, 1], v * 2);
+      arms[v] = a;
+      arms[v + 1] = a;
+      if (i < WAKE_POINTS - 1) indices.push(v, v + 1, v + 2, v + 1, v + 3, v + 2);
+    }
+  });
+  geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(vertexCount * 3), 3));
+  geometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
+  geometry.setAttribute("arm", new THREE.BufferAttribute(arms, 1));
+  geometry.setIndex(indices);
+  return geometry;
+}
 const up = new THREE.Vector3();
 const ahead = new THREE.Vector3();
 const forward = new THREE.Vector3();
 const side = new THREE.Vector3();
 const basis = new THREE.Matrix4();
 const point = new THREE.Vector3();
+const corner = new THREE.Vector3();
 
 // Ein Schiff auf einer Route: hängt an der Erde (dreht mit), fährt hin und her
 export default function Ship({ label = "Containerschiff", waypoints, speed = 0.004, size = 0.06, start = 0 }) {
   const frame = useRef();
   const ship = useRef();
-  const wakeLeft = useRef();
-  const wakeRight = useRef();
+  const wake = useRef();
   const scene = useThree((state) => state.scene);
   const route = useMemo(() => createRoute(waypoints), [waypoints]);
   const progress = useRef({ t: start, direction: 1 });
@@ -135,17 +168,13 @@ export default function Ship({ label = "Containerschiff", waypoints, speed = 0.0
     { collapsed: true }
   );
 
-  const wakeColors = useMemo(() => {
-    const colors = [];
-    for (let i = 0; i < WAKE_POINTS; i++) {
-      const fade = 1 - i / (WAKE_POINTS - 1);
-      colors.push([0.75 + 0.25 * fade, 0.78 + 0.22 * fade, 1]);
-    }
-    return colors;
-  }, []);
-  const initialWake = useMemo(() => Array.from({ length: WAKE_POINTS }, () => [0, 0, 0]), []);
+  const wakeGeo = useMemo(() => wakeGeometry(), []);
+  const wakeUniforms = useMemo(
+    () => ({ uTime: { value: 0 }, uColor: { value: new THREE.Color("#f2f0ff") }, uOpacity: { value: 0.8 } }),
+    []
+  );
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     const globe = scene.getObjectByName("globe");
     if (!globe) return;
     // Rahmen folgt der Erde: alles darin ist in Erd-Koordinaten (Einheitskugel)
@@ -173,23 +202,27 @@ export default function Ship({ label = "Containerschiff", waypoints, speed = 0.0
     ship.current.quaternion.setFromRotationMatrix(basis);
     ship.current.scale.setScalar(c.size);
 
-    // Kielwasser: zwei Linien hinter dem Heck, die V-förmig auseinanderlaufen
-    const length = c.size * 2.2 * c.wake;
-    [wakeLeft, wakeRight].forEach((ref, k) => {
-      const sign = k === 0 ? -1 : 1;
-      const positions = [];
+    // Kielwasser: Schaumbänder hinter dem Heck, auf der Meeresoberfläche
+    const length = c.size * 2.4 * c.wake;
+    const positions = wake.current.geometry.attributes.position;
+    WAKE_ARMS.forEach((arm, a) => {
       for (let i = 0; i < WAKE_POINTS; i++) {
         const f = i / (WAKE_POINTS - 1);
+        const distance = c.size * 0.95 + f * length * arm.length;
+        // Mittellinie des Bandes, läuft schräg nach aussen
         point
           .copy(up)
-          .addScaledVector(forward, -c.size * 1.0 - f * length)
-          .addScaledVector(side, sign * (c.size * 0.12 + f * length * 0.35))
-          .normalize()
-          .multiplyScalar(1.001);
-        positions.push(point.x, point.y, point.z);
+          .addScaledVector(forward, -distance)
+          .addScaledVector(side, arm.spread * f * length * arm.length);
+        const halfWidth = c.size * THREE.MathUtils.lerp(arm.width[0], arm.width[1], f);
+        for (let k = 0; k < 2; k++) {
+          corner.copy(point).addScaledVector(side, k === 0 ? -halfWidth : halfWidth).normalize().multiplyScalar(1.0008);
+          positions.setXYZ((a * WAKE_POINTS + i) * 2 + k, corner.x, corner.y, corner.z);
+        }
       }
-      ref.current.geometry.setPositions(positions);
     });
+    positions.needsUpdate = true;
+    wake.current.material.uniforms.uTime.value = state.clock.elapsedTime;
   });
 
   return (
@@ -197,8 +230,16 @@ export default function Ship({ label = "Containerschiff", waypoints, speed = 0.0
       <group ref={ship}>
         <ContainerShipModel />
       </group>
-      <Line ref={wakeLeft} points={initialWake} vertexColors={wakeColors} lineWidth={1.4} transparent opacity={0.85} />
-      <Line ref={wakeRight} points={initialWake} vertexColors={wakeColors} lineWidth={1.4} transparent opacity={0.85} />
+      <mesh ref={wake} geometry={wakeGeo} frustumCulled={false}>
+        <shaderMaterial
+          vertexShader={wakeVertex}
+          fragmentShader={wakeFragment}
+          uniforms={wakeUniforms}
+          transparent
+          depthWrite={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
     </group>
   );
 }
