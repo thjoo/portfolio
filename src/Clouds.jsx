@@ -3,116 +3,184 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useControls } from "leva";
 import * as THREE from "three";
 import { useObjectStyle } from "./objectStyle.js";
-import Paint from "./Paint.jsx";
 import { latLonToVector } from "./route.js";
+import noise from "./shaders/noise.glsl?raw";
+import sunlight from "./shaders/sunlight.glsl?raw";
 
-// Haufenwolken aus wenigen abgeflachten Kugeln, die mit dem Wind nach Osten ziehen und einen weichen
-// Schatten auf die Erde werfen. Alle Kugeln in einer InstancedMesh, alle Schatten in einer zweiten:
-// zwei Zeichenaufrufe für alle Wolken zusammen.
+// Bilderbuch-Wolken wie mit Farbstift gezeichnet: flache Unterkante, gewellte Oberseite, aus kleinen
+// Schlaufen gekritzelt, in Violett, Flieder und Rosa. Flache Scheiben, die immer zur Kamera zeigen,
+// alle in einer InstancedMesh (ein Zeichenaufruf). Eine Wolke hat einen kleinen Blitz.
 
-// [Breite, Länge, Grösse]
+// [Breite, Länge, Grösse, Farbe, Blitz]
 const CLOUDS = [
-  [52, -35, 1.1],
-  [44, -15, 0.8],
-  [12, -40, 0.9],
-  [-8, -20, 1.0],
-  [-38, -10, 1.2],
-  [-45, -60, 0.9],
-  [30, 60, 1.0],
-  [5, 80, 0.8],
-  [-20, 65, 1.1],
-  [58, 100, 0.9],
-  [20, 150, 1.2],
-  [-10, -150, 1.0],
-  [40, -150, 0.9],
-  [-50, 150, 1.1],
-  [62, -20, 0.8],
-  [-30, 30, 0.9],
+  [48, -30, 1.0, "#7468ee", 0],
+  [8, -38, 0.9, "#9a5cee", 0],
+  [-32, -18, 1.1, "#6c3ee8", 0],
+  [40, 25, 0.95, "#d78cea", 0],
+  [-12, 30, 1.0, "#7684f0", 0],
+  [55, 110, 0.9, "#6c3ee8", 1],
+  [15, 150, 1.05, "#d78cea", 0],
+  [-25, -120, 1.0, "#7468ee", 0],
+  [30, -150, 0.9, "#9a5cee", 0],
+  [-40, 120, 1.0, "#7684f0", 0],
 ];
 
-// Zufall mit festem Startwert, damit die Wolken bei jedem Laden gleich aussehen
-function mulberry32(seed) {
-  return () => {
-    seed |= 0;
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-// Jede Wolke: 6–9 Kugeln, in der Mitte grösser und höher, aussen kleiner
-function buildPuffs() {
-  const random = mulberry32(7);
-  return CLOUDS.map(([lat, lon, size]) => {
-    const count = 6 + Math.floor(random() * 4);
-    const puffs = [];
-    for (let i = 0; i < count; i++) {
-      // Kugeln um die Mitte gehäuft (etwas länger als breit), in der Mitte grösser und höher
-      const angle = random() * Math.PI * 2;
-      const distance = Math.sqrt(random()) * (i === 0 ? 0 : 1);
-      const middle = 1 - distance * 0.8;
-      puffs.push({
-        east: Math.cos(angle) * distance * 1.1,
-        north: Math.sin(angle) * distance * 0.65,
-        up: middle * 0.3,
-        radius: (0.4 + 0.45 * middle) * (0.85 + random() * 0.3),
-      });
-    }
-    return { lat, lon, size, puffs, drift: 0.6 + random() * 0.8, phase: random() * 10 };
-  });
-}
-
-const shadowVertex = /* glsl */ `
-  varying vec2 vUv;
-  varying vec3 vWorld;
+const vertexShader = /* glsl */ `
+  attribute vec3 aColor;
+  attribute float aSeed;
+  attribute float aBolt;
+  varying vec2 vP;
+  varying vec3 vColor;
+  varying float vSeed;
+  varying float vBolt;
+  varying vec3 vCenter;
   void main() {
-    vUv = uv;
-    vec4 world = modelMatrix * instanceMatrix * vec4(position, 1.0);
-    vWorld = world.xyz;
-    gl_Position = projectionMatrix * viewMatrix * world;
+    // Mittelpunkt und Grösse aus der Instanzmatrix, Ausrichtung zur Kamera (Billboard)
+    vec4 center = modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+    float size = length(instanceMatrix[0].xyz);
+    vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
+    vec3 up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
+    vec3 world = center.xyz + (right * position.x + up * position.y) * size;
+    vP = position.xy;
+    vColor = aColor;
+    vSeed = aSeed;
+    vBolt = aBolt;
+    vCenter = center.xyz;
+    gl_Position = projectionMatrix * viewMatrix * vec4(world, 1.0);
   }
 `;
-const shadowFragment = /* glsl */ `
+
+const fragmentShader = /* glsl */ `
   uniform vec3 uSunDirection;
-  uniform float uOpacity;
-  varying vec2 vUv;
-  varying vec3 vWorld;
+  uniform float uTime;
+  uniform float uCurls;
+  varying vec2 vP;
+  varying vec3 vColor;
+  varying float vSeed;
+  varying float vBolt;
+  varying vec3 vCenter;
+  ${noise}
+  ${sunlight}
+
+  float hash(float n) { return fract(sin(n * 91.7 + 13.3) * 43758.5453); }
+  vec2 hash2(vec2 p) { return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453); }
+
+  float sdRoundBox(vec2 p, vec2 b, float r) {
+    vec2 q = abs(p) - b + r;
+    return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+  }
+
+  // Umriss: Bögen oben (in der Mitte höher), flache Unterkante
+  float cloudShape(vec2 p) {
+    float d = sdRoundBox(p - vec2(0.0, -0.17), vec2(0.82, 0.14), 0.12);
+    for (int i = 0; i < 5; i++) {
+      float f = float(i) / 4.0;
+      float middle = 1.0 - abs(f - 0.5) * 2.0;
+      vec2 c = vec2(mix(-0.62, 0.62, f) + (hash(vSeed + f * 7.0) - 0.5) * 0.08, -0.08 + 0.2 * middle);
+      float r = 0.2 + 0.13 * middle + (hash(vSeed + f * 13.0) - 0.5) * 0.05;
+      d = min(d, length(p - c) - r);
+    }
+    // Flache Unterkante
+    return max(d, -0.31 - p.y);
+  }
+
+  // Kleine Farbstift-Schlaufen: Kreise in einem lockeren Raster, je Zelle leicht versetzt
+  float curls(vec2 p, float width) {
+    vec2 g = p / 0.2;
+    vec2 cell = floor(g);
+    float stroke = 0.0;
+    for (int y = -1; y <= 1; y++) {
+      for (int x = -1; x <= 1; x++) {
+        vec2 id = cell + vec2(float(x), float(y));
+        vec2 h = hash2(id + vSeed);
+        vec2 c = id + 0.5 + (h - 0.5) * 0.8;
+        float radius = 0.38 + 0.3 * h.x;
+        float ring = abs(length(g - c) - radius);
+        stroke = max(stroke, 1.0 - smoothstep(width * 0.5, width, ring));
+      }
+    }
+    return stroke;
+  }
+
+  // Blitz: Zickzack unter der Wolke
+  float segment(vec2 p, vec2 a, vec2 b) {
+    vec2 pa = p - a, ba = b - a;
+    return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0));
+  }
+  float bolt(vec2 p) {
+    float d = segment(p, vec2(0.08, -0.3), vec2(-0.06, -0.42));
+    d = min(d, segment(p, vec2(-0.06, -0.42), vec2(0.06, -0.45)));
+    d = min(d, segment(p, vec2(0.06, -0.45), vec2(-0.05, -0.6)));
+    return d;
+  }
+
   void main() {
-    float d = length(vUv - 0.5) * 2.0;
-    float soft = 1.0 - smoothstep(0.15, 1.0, d);
-    // Schatten nur auf der Tagseite
-    float day = smoothstep(-0.05, 0.3, dot(normalize(vWorld), normalize(uSunDirection)));
-    float alpha = soft * day * uOpacity;
-    if (alpha < 0.01) discard;
-    gl_FragColor = vec4(0.14, 0.11, 0.36, alpha);
+    vec2 p = vP;
+    // Umriss leicht zittrig wie von Hand gezogen
+    float wobble = snoise(vec3(p * 9.0, vSeed)) * 0.018;
+    float d = cloudShape(p) + wobble;
+    float aa = fwidth(d) * 1.2;
+    float inside = 1.0 - smoothstep(-aa, aa, d);
+
+    // Sonne wie bei allen Objekten: im Erdschatten dunkler
+    float lit = earthShadow(vCenter, uSunDirection);
+    float light = mix(0.55, 1.0, lit);
+
+    vec3 color = vec3(0.0);
+    float alpha = 0.0;
+    if (inside > 0.0) {
+      // Oben heller, unten satter und dunkler (wie im Bild)
+      float top = smoothstep(-0.32, 0.35, p.y);
+      vec3 base = mix(vColor * 0.62, vColor, top);
+      // Am Rand sammelt sich mehr Farbe
+      base *= 1.0 - (1.0 - smoothstep(0.0, 0.05, -d)) * 0.18;
+      // Helle Schlaufen darüber, oben deutlicher
+      float loops = curls(p + vec2(vSeed * 0.37, 0.0), 0.2) * uCurls;
+      base = mix(base, mix(vColor, vec3(1.0), 0.3), loops * (0.3 + 0.3 * top));
+      // Papierkorn des Farbstifts
+      base *= 1.0 + snoise(vec3(p * 60.0, vSeed)) * 0.05;
+      color = base;
+      alpha = inside;
+    }
+    if (vBolt > 0.5) {
+      // Blitz zuckt ab und zu auf
+      float flash = step(0.82, fract(sin(floor(uTime * 2.5) * 12.9898) * 43758.5453));
+      float b = (1.0 - smoothstep(0.012, 0.03, bolt(p))) * step(p.y, -0.29) * flash;
+      color = mix(color, vec3(1.0, 0.97, 0.78), b);
+      alpha = max(alpha, b);
+    }
+    if (alpha < 0.05) discard;
+    gl_FragColor = vec4(color * light, alpha);
     #include <colorspace_fragment>
   }
 `;
 
 const up = new THREE.Vector3();
-const east = new THREE.Vector3();
-const north = new THREE.Vector3();
-const sunLocal = new THREE.Vector3();
-const offset = new THREE.Vector3();
 const position = new THREE.Vector3();
+const matrix = new THREE.Matrix4();
 const quaternion = new THREE.Quaternion();
 const scaleVector = new THREE.Vector3();
-const matrix = new THREE.Matrix4();
-const basis = new THREE.Matrix4();
-const inverse = new THREE.Matrix4();
-const Y = new THREE.Vector3(0, 1, 0);
 
 export default function Clouds() {
   const frame = useRef();
-  const puffMesh = useRef();
-  const shadowMesh = useRef();
+  const mesh = useRef();
   const scene = useThree((state) => state.scene);
   const style = useObjectStyle();
-  const clouds = useMemo(() => buildPuffs(), []);
-  const puffCount = useMemo(() => clouds.reduce((sum, cloud) => sum + cloud.puffs.length, 0), [clouds]);
-  const shadowUniforms = useMemo(
-    () => ({ uSunDirection: { value: new THREE.Vector3(0, 0, 1) }, uOpacity: { value: 0.75 } }),
+
+  // Fläche etwas breiter als hoch; unten Platz für den Blitz
+  const geometry = useMemo(() => {
+    const g = new THREE.PlaneGeometry(2, 1.3);
+    g.translate(0, -0.03, 0);
+    const colors = new Float32Array(CLOUDS.length * 3);
+    const color = new THREE.Color();
+    CLOUDS.forEach(([, , , hex], i) => color.set(hex).toArray(colors, i * 3));
+    g.setAttribute("aColor", new THREE.InstancedBufferAttribute(colors, 3));
+    g.setAttribute("aSeed", new THREE.InstancedBufferAttribute(new Float32Array(CLOUDS.map((_, i) => i * 3.17 + 1)), 1));
+    g.setAttribute("aBolt", new THREE.InstancedBufferAttribute(new Float32Array(CLOUDS.map((cloud) => cloud[4])), 1));
+    return g;
+  }, []);
+  const uniforms = useMemo(
+    () => ({ uSunDirection: { value: new THREE.Vector3(0, 0, 1) }, uTime: { value: 0 }, uCurls: { value: 1 } }),
     []
   );
 
@@ -120,11 +188,10 @@ export default function Clouds() {
     "Wolken",
     {
       visible: { value: true, label: "an" },
-      size: { value: 0.05, min: 0.005, max: 0.1, label: "Grösse" },
-      altitude: { value: 0.025, min: 0.005, max: 0.15, label: "Höhe" },
+      size: { value: 0.14, min: 0.03, max: 0.3, label: "Grösse" },
+      altitude: { value: 0.06, min: 0.01, max: 0.3, label: "Höhe" },
       speed: { value: 0.6, min: 0, max: 5, label: "Wind (°/s)" },
-      color: { value: "#f6f3fc", label: "Farbe" },
-      shadow: { value: 0.75, min: 0, max: 1, label: "Schatten" },
+      curls: { value: 1, min: 0, max: 1.5, label: "Schlaufen" },
     },
     { collapsed: true }
   );
@@ -137,75 +204,29 @@ export default function Clouds() {
     const t = clock.elapsedTime;
     const size = c.size * style.scale;
 
-    // Sonne in Erd-Koordinaten: Schatten fällt von der Sonne weg auf den Boden
-    inverse.copy(globe.matrixWorld).invert();
-    sunLocal.copy(globe.material.uniforms.uSunDirection.value).transformDirection(inverse);
-
-    let i = 0;
-    clouds.forEach((cloud, k) => {
-      // Mit dem Wind nach Osten, dazu leichtes Pendeln in der Breite
-      const lon = cloud.lon + t * c.speed * cloud.drift;
-      const lat = cloud.lat + Math.sin(t * 0.05 + cloud.phase) * 2;
-      latLonToVector(lat, ((lon + 180) % 360) - 180, up);
-      east.crossVectors(Y, up).normalize();
-      north.crossVectors(up, east);
-      const s = size * cloud.size;
-
-      // Kugeln der Wolke im Tangentenraum: x = Osten, y = oben, z = Norden
-      basis.makeBasis(east, up, north);
-      quaternion.setFromRotationMatrix(basis);
-      for (const puff of cloud.puffs) {
-        // Langsames Quellen: jede Kugel atmet ein wenig
-        const breathe = 1 + 0.06 * Math.sin(t * 0.4 + k * 1.7 + puff.east * 3);
-        offset
-          .copy(east)
-          .multiplyScalar(puff.east * s)
-          .addScaledVector(north, puff.north * s)
-          .addScaledVector(up, puff.up * s);
-        position.copy(up).multiplyScalar(1 + c.altitude).add(offset);
-        const r = puff.radius * s * breathe;
-        scaleVector.set(r, r * 0.62, r);
-        matrix.compose(position, quaternion, scaleVector);
-        puffMesh.current.setMatrixAt(i, matrix);
-        i++;
-      }
-
-      // Schatten: eine weiche Scheibe auf dem Boden, von der Sonne weg verschoben (etwas übertrieben, damit
-      // er neben der Wolke sichtbar wird und nicht von ihr verdeckt)
-      const away = sunLocal.dot(up);
-      offset.copy(sunLocal).addScaledVector(up, -away).multiplyScalar(-(c.altitude + size * 1.2) * 1.6);
-      position.copy(up).multiplyScalar(1.0008).add(offset);
-      scaleVector.set(s * 3.6, s * 2.6, 1);
-      // Scheibe liegt in der Tangentialebene: Ebene (x, y) der Geometrie -> (Osten, Norden)
-      basis.makeBasis(east, north, up);
-      quaternion.setFromRotationMatrix(basis);
+    CLOUDS.forEach(([lat, lon, scale], i) => {
+      // Mit dem Wind langsam nach Osten, dazu leichtes Pendeln in der Breite
+      const drift = 0.7 + ((i * 37) % 10) / 15;
+      const lng = lon + t * c.speed * drift;
+      latLonToVector(lat + Math.sin(t * 0.05 + i) * 2, ((((lng + 180) % 360) + 360) % 360) - 180, up);
+      position.copy(up).multiplyScalar(1 + c.altitude);
+      scaleVector.setScalar(size * scale);
       matrix.compose(position, quaternion, scaleVector);
-      shadowMesh.current.setMatrixAt(k, matrix);
+      mesh.current.setMatrixAt(i, matrix);
     });
-    puffMesh.current.instanceMatrix.needsUpdate = true;
-    shadowMesh.current.instanceMatrix.needsUpdate = true;
-    puffMesh.current.visible = shadowMesh.current.visible = c.visible;
+    mesh.current.instanceMatrix.needsUpdate = true;
+    mesh.current.visible = c.visible;
 
-    const u = shadowMesh.current.material.uniforms;
+    const u = mesh.current.material.uniforms;
     u.uSunDirection.value.copy(globe.material.uniforms.uSunDirection.value);
-    u.uOpacity.value = c.shadow;
+    u.uTime.value = t;
+    u.uCurls.value = c.curls;
   });
 
   return (
     <group ref={frame} matrixAutoUpdate={false}>
-      <instancedMesh ref={puffMesh} args={[null, null, puffCount]} frustumCulled={false}>
-        <sphereGeometry args={[1, 18, 12]} />
-        <Paint color={c.color} noiseScale={60} />
-      </instancedMesh>
-      <instancedMesh ref={shadowMesh} args={[null, null, clouds.length]} frustumCulled={false} renderOrder={1}>
-        <planeGeometry args={[1, 1]} />
-        <shaderMaterial
-          vertexShader={shadowVertex}
-          fragmentShader={shadowFragment}
-          uniforms={shadowUniforms}
-          transparent
-          depthWrite={false}
-        />
+      <instancedMesh ref={mesh} args={[geometry, null, CLOUDS.length]} frustumCulled={false}>
+        <shaderMaterial vertexShader={vertexShader} fragmentShader={fragmentShader} uniforms={uniforms} transparent />
       </instancedMesh>
     </group>
   );
