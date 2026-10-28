@@ -1,6 +1,5 @@
-import { useMemo, useRef } from "react";
+import { useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Line } from "@react-three/drei";
 import { useControls } from "leva";
 import * as THREE from "three";
 import { useObjectStyle } from "./objectStyle.js";
@@ -32,9 +31,8 @@ const axisA = new THREE.Vector3();
 const axisB = new THREE.Vector3();
 const sunLocal = new THREE.Vector3();
 const inverse = new THREE.Quaternion();
-const point = new THREE.Vector3();
 
-// Satellit auf einer schrägen Umlaufbahn mit gestrichelter Bahnlinie;
+// Satellit auf einer schrägen Umlaufbahn;
 // Antenne zeigt zur Erde, die Solarflügel drehen sich zur Sonne
 export default function Satellite({ label = "Satellit", size = 0.05 }) {
   const body = useRef();
@@ -50,25 +48,10 @@ export default function Satellite({ label = "Satellit", size = 0.05 }) {
       distance: { value: 1.45, min: 1.1, max: 2.5, label: "Abstand" },
       inclination: { value: 62, min: 0, max: 90, step: 1, label: "Bahnneigung (°)" },
       node: { value: 40, min: -180, max: 180, step: 1, label: "Bahn drehen (°)" },
-      speed: { value: 0.08, min: 0, max: 0.5, label: "Tempo" },
-      orbitLine: { value: true, label: "Bahnlinie" },
-      lineOpacity: { value: 0.45, min: 0, max: 1, label: "Bahnlinie Deckkraft" },
+      speed: { value: 0.015, min: 0, max: 0.2, label: "Tempo" },
     },
     { collapsed: true }
   );
-
-  // Gestrichelte Bahnlinie wie mit Bleistift ins Bilderbuch gezeichnet
-  const orbitPoints = useMemo(() => {
-    const a = new THREE.Vector3();
-    const b = new THREE.Vector3();
-    orbitAxes(c.inclination, c.node, a, b);
-    const points = [];
-    for (let i = 0; i <= 160; i++) {
-      const t = (i / 160) * Math.PI * 2;
-      points.push(point.copy(a).multiplyScalar(Math.cos(t)).addScaledVector(b, Math.sin(t)).multiplyScalar(c.distance).toArray());
-    }
-    return points;
-  }, [c.inclination, c.node, c.distance]);
 
   useFrame((state, delta) => {
     angle.current += delta * c.speed;
@@ -87,20 +70,57 @@ export default function Satellite({ label = "Satellit", size = 0.05 }) {
   });
 
   return (
-    <>
-      {c.orbitLine && (
-        <Line
-          points={orbitPoints}
-          color="#ece8ff"
-          lineWidth={1.3}
-          dashed
-          dashSize={0.035}
-          gapSize={0.03}
-          transparent
-          opacity={c.lineOpacity}
-        />
-      )}
-      <group ref={body}>
+    <group ref={body}>
+    </group>
+  );
+}
+
+const up = new THREE.Vector3();
+const forward = new THREE.Vector3();
+const axisA = new THREE.Vector3();
+const axisB = new THREE.Vector3();
+const sunLocal = new THREE.Vector3();
+const inverse = new THREE.Quaternion();
+
+// Satellit auf einer schrägen Umlaufbahn;
+// Antenne zeigt zur Erde, die Solarflügel drehen sich zur Sonne
+export default function Satellite({ label = "Satellit", size = 0.05 }) {
+  const body = useRef();
+  const wings = useRef();
+  const angle = useRef(2.2);
+  const scene = useThree((state) => state.scene);
+  const style = useObjectStyle();
+
+  const c = useControls(
+    label,
+    {
+      size: { value: size, min: 0.02, max: 0.2, label: "Grösse" },
+      distance: { value: 1.45, min: 1.1, max: 2.5, label: "Abstand" },
+      inclination: { value: 62, min: 0, max: 90, step: 1, label: "Bahnneigung (°)" },
+      node: { value: 40, min: -180, max: 180, step: 1, label: "Bahn drehen (°)" },
+      speed: { value: 0.015, min: 0, max: 0.2, label: "Tempo" },
+    },
+    { collapsed: true }
+  );
+
+  useFrame((state, delta) => {
+    angle.current += delta * c.speed;
+    orbitAxes(c.inclination, c.node, axisA, axisB);
+    orbitPose(axisA, axisB, angle.current, up, forward, body.current.quaternion);
+    body.current.position.copy(up).multiplyScalar(c.distance);
+    body.current.scale.setScalar(c.size * style.scale);
+
+    // Solarflügel um ihre Achse (lokal z) zur Sonne drehen: Flächennormale (lokal y) zeigt zur Sonne
+    const globe = scene.getObjectByName("globe");
+    if (globe) {
+      inverse.copy(body.current.quaternion).invert();
+      sunLocal.copy(globe.material.uniforms.uSunDirection.value).applyQuaternion(inverse);
+      wings.current.rotation.z = Math.atan2(-sunLocal.x, sunLocal.y);
+    }
+  });
+
+  return (
+    <group ref={body}>
         {/* Körper mit Goldfolie */}
         <mesh>
           <boxGeometry args={[0.42, 0.5, 0.42]} />
@@ -125,7 +145,6 @@ export default function Satellite({ label = "Satellit", size = 0.05 }) {
           <Wing side={1} />
         </group>
         <ShipLight position={[0.1, 0.56, 0.1]} color="#ff5a4a" size={0.3} />
-      </group>
-    </>
+    </group>
   );
 }
