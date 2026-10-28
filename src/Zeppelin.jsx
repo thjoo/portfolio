@@ -6,6 +6,7 @@ import { useObjectStyle } from "./objectStyle.js";
 import { Envelope } from "./Balloon.jsx";
 import Paint from "./Paint.jsx";
 import ShipLight from "./ShipLight.jsx";
+import { orbitAxes, orbitPose } from "./orbit.js";
 
 const WINDOW_GLOW = "#ffd98a";
 
@@ -52,13 +53,10 @@ function Engine({ side, propeller }) {
   );
 }
 
-const UP = new THREE.Vector3();
+const up = new THREE.Vector3();
 const forward = new THREE.Vector3();
-const side = new THREE.Vector3();
-const basis = new THREE.Matrix4();
 const axisA = new THREE.Vector3();
 const axisB = new THREE.Vector3();
-const normal = new THREE.Vector3();
 
 // Zeppelin auf einer schrägen Kreisbahn um die Erde, Bug in Flugrichtung, Bauch zur Erde
 export default function Zeppelin({ label = "Zeppelin", size = 0.1 }) {
@@ -91,22 +89,9 @@ export default function Zeppelin({ label = "Zeppelin", size = 0.1 }) {
     angle.current += delta * c.speed;
     const t = state.clock.elapsedTime;
 
-    // Bahnebene: Normale aus Neigung und Drehung, zwei Achsen in der Ebene
-    const inclination = THREE.MathUtils.degToRad(c.inclination);
-    const node = THREE.MathUtils.degToRad(c.node);
-    normal.set(Math.sin(inclination) * Math.cos(node), Math.cos(inclination), Math.sin(inclination) * Math.sin(node));
-    axisA.set(-Math.sin(node), 0, Math.cos(node));
-    axisB.crossVectors(normal, axisA).normalize();
-
-    const a = angle.current;
-    const height = c.distance + Math.sin(t * 0.6) * 0.008;
-    UP.copy(axisA).multiplyScalar(Math.cos(a)).addScaledVector(axisB, Math.sin(a));
-    body.current.position.copy(UP).multiplyScalar(height);
-    // Flugrichtung = Ableitung der Kreisbahn; rechts = vorne × oben
-    forward.copy(axisA).multiplyScalar(-Math.sin(a)).addScaledVector(axisB, Math.cos(a));
-    side.crossVectors(forward, UP);
-    basis.makeBasis(forward, UP, side);
-    body.current.quaternion.setFromRotationMatrix(basis);
+    orbitAxes(c.inclination, c.node, axisA, axisB);
+    orbitPose(axisA, axisB, angle.current, up, forward, body.current.quaternion);
+    body.current.position.copy(up).multiplyScalar(c.distance + Math.sin(t * 0.6) * 0.008);
     // Leichtes Nicken wie in Böen
     body.current.rotateZ(Math.sin(t * 0.45) * 0.03);
     body.current.scale.setScalar(c.size * style.scale);
