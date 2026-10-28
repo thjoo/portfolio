@@ -17,6 +17,23 @@ const ATLANTIC_ROUTE = [
   [48.0, -15.0],
   [49.6, -4.0],
 ];
+
+// Karibik: Miami -> Bahamas -> Puerto Rico -> Kleine Antillen
+const CARIBBEAN_ROUTE = [
+  [25.6, -79.6],
+  [22.5, -74.5],
+  [19.2, -67.5],
+  [15.5, -62.0],
+  [12.8, -60.2],
+];
+
+// Südatlantik: Kapstadt -> Rio de Janeiro
+const SOUTH_ATLANTIC_ROUTE = [
+  [-34.6, 17.6],
+  [-31.0, 2.0],
+  [-27.0, -20.0],
+  [-24.2, -40.5],
+];
 import Background from "./Background.jsx";
 import { PaperEffect } from "./PaperEffect.js";
 import { CopyPass } from "postprocessing";
@@ -128,7 +145,9 @@ export default function App() {
         <Background />
         <Stars />
         <Globe />
-        <Ship label="Containerschiff" waypoints={ATLANTIC_ROUTE} start={0.35} />
+        <Ship label="Containerschiff" model="container" waypoints={ATLANTIC_ROUTE} start={0.35} />
+        <Ship label="Kreuzfahrtschiff" model="cruise" waypoints={CARIBBEAN_ROUTE} start={0.2} size={0.055} />
+        <Ship label="Frachter" model="freighter" waypoints={SOUTH_ATLANTIC_ROUTE} start={0.6} size={0.055} speed={0.003} />
         <Balloon label="Ballon Klassik" shape="classic" stripeA="#5b7fe2" stripeB="#e8dfb4" angle={-62} height={-0.45} />
         <Balloon
           label="Ballon Zwiebel"

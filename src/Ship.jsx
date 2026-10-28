@@ -13,18 +13,19 @@ const wakeFragment = wakeFragmentSource.replace("#include ./noise.glsl", noise);
 // Containerschiff: Bug zeigt nach +x, oben ist +y, Breite entlang z. Länge etwa 2.1 Einheiten.
 const CONTAINER_COLORS = ["#d9614c", "#f2c46b", "#5fae7a", "#efe8d8", "#e9874a", "#4fb3c9", "#c8506e", "#7d8fe0"];
 
-function hullGeometry() {
-  // Umriss von oben: Heck gerade, Bug spitz
+// Rumpf von oben: Heck gerade, Bug spitz. depth = Höhe, bottom = Unterkante (y)
+function hullGeometry({ depth = 0.16, width = 0.2, bottom = 0 } = {}) {
   const shape = new THREE.Shape();
-  shape.moveTo(-1.0, -0.2);
-  shape.lineTo(0.7, -0.2);
-  shape.quadraticCurveTo(1.0, -0.18, 1.12, 0);
-  shape.quadraticCurveTo(1.0, 0.18, 0.7, 0.2);
-  shape.lineTo(-1.0, 0.2);
-  shape.lineTo(-1.0, -0.2);
-  const geometry = new THREE.ExtrudeGeometry(shape, { depth: 0.16, bevelEnabled: false });
+  shape.moveTo(-1.0, -width);
+  shape.lineTo(0.7, -width);
+  shape.quadraticCurveTo(1.0, -width * 0.9, 1.12, 0);
+  shape.quadraticCurveTo(1.0, width * 0.9, 0.7, width);
+  shape.lineTo(-1.0, width);
+  shape.lineTo(-1.0, -width);
+  const geometry = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false });
   // Umriss liegt in x/y, Extrusion entlang z -> so drehen, dass die Extrusion nach oben zeigt
   geometry.rotateX(-Math.PI / 2);
+  geometry.translate(0, bottom, 0);
   return geometry;
 }
 
@@ -111,6 +112,107 @@ function ContainerShipModel() {
   );
 }
 
+// Kreuzfahrtschiff: weiss mit rotem Unterwasserschiff, gestaffelte Decks, Fensterbänder, zwei rote Schornsteine
+function CruiseShipModel() {
+  const lower = useMemo(() => hullGeometry({ depth: 0.06, width: 0.21 }), []);
+  const upper = useMemo(() => hullGeometry({ depth: 0.12, width: 0.21, bottom: 0.06 }), []);
+  const decks = [
+    { x: -0.12, length: 1.55, width: 0.36, y: 0.18, height: 0.1 },
+    { x: -0.2, length: 1.25, width: 0.32, y: 0.28, height: 0.09 },
+    { x: -0.3, length: 0.85, width: 0.27, y: 0.37, height: 0.08 },
+  ];
+  return (
+    <group>
+      <mesh geometry={lower}>
+        <Paint color="#c4483e" />
+      </mesh>
+      <mesh geometry={upper}>
+        <Paint color="#f1edf8" />
+      </mesh>
+      {decks.map((d, i) => (
+        <group key={i}>
+          <mesh position={[d.x, d.y + d.height / 2, 0]}>
+            <boxGeometry args={[d.length, d.height, d.width]} />
+            <Paint color="#f4f1fa" boxEdges />
+          </mesh>
+          {/* Fensterbänder auf beiden Seiten */}
+          {[-1, 1].map((s) => (
+            <mesh key={s} position={[d.x, d.y + d.height * 0.55, s * (d.width / 2 + 0.002)]}>
+              <boxGeometry args={[d.length * 0.92, d.height * 0.28, 0.004]} />
+              <Paint color="#3b3a78" />
+            </mesh>
+          ))}
+        </group>
+      ))}
+      {/* Zwei rote Schornsteine mit dunkler Kappe */}
+      {[-0.28, -0.52].map((x) => (
+        <group key={x} position={[x, 0.52, 0]}>
+          <mesh>
+            <boxGeometry args={[0.1, 0.16, 0.12]} />
+            <Paint color="#d9503f" boxEdges />
+          </mesh>
+          <mesh position={[0, 0.09, 0]}>
+            <boxGeometry args={[0.105, 0.03, 0.125]} />
+            <Paint color="#2a2650" />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+// Frachter: dunkler Rumpf mit rotem Unterwasserschiff, grüne Ladeluken, Masten mit Ladebäumen, Aufbau am Heck
+function FreighterModel() {
+  const lower = useMemo(() => hullGeometry({ depth: 0.06, width: 0.19 }), []);
+  const upper = useMemo(() => hullGeometry({ depth: 0.12, width: 0.19, bottom: 0.06 }), []);
+  const hatches = [0.62, 0.36, 0.1, -0.16, -0.42];
+  return (
+    <group>
+      <mesh geometry={lower}>
+        <Paint color="#b8463c" />
+      </mesh>
+      <mesh geometry={upper}>
+        <Paint color="#2f2b5e" />
+      </mesh>
+      {/* Deck */}
+      <mesh position={[0.05, 0.185, 0]}>
+        <boxGeometry args={[1.9, 0.01, 0.34]} />
+        <Paint color="#8a6a52" boxEdges />
+      </mesh>
+      {hatches.map((x) => (
+        <mesh key={x} position={[x, 0.21, 0]}>
+          <boxGeometry args={[0.2, 0.04, 0.26]} />
+          <Paint color="#4f8f6a" boxEdges />
+        </mesh>
+      ))}
+      {/* Masten mit Ladebäumen */}
+      {[0.49, -0.03].map((x) => (
+        <group key={x} position={[x, 0.19, 0]}>
+          <mesh position={[0, 0.17, 0]}>
+            <boxGeometry args={[0.025, 0.34, 0.025]} />
+            <Paint color="#e9874a" />
+          </mesh>
+          <mesh position={[0.1, 0.2, 0]} rotation={[0, 0, -0.9]}>
+            <boxGeometry args={[0.012, 0.28, 0.012]} />
+            <Paint color="#e9874a" />
+          </mesh>
+        </group>
+      ))}
+      {/* Aufbau am Heck */}
+      <mesh position={[-0.78, 0.3, 0]}>
+        <boxGeometry args={[0.26, 0.22, 0.3]} />
+        <Paint color="#efeaf6" boxEdges />
+      </mesh>
+      <mesh position={[-0.82, 0.45, 0]}>
+        <boxGeometry args={[0.07, 0.1, 0.08]} />
+        <Paint color="#2a2650" boxEdges />
+      </mesh>
+    </group>
+  );
+}
+
+const MODELS = { container: ContainerShipModel, cruise: CruiseShipModel, freighter: FreighterModel };
+
 const WAKE_POINTS = 24;
 // Drei Schaumbänder: links, rechts (V-förmig auseinander) und eine kurze Spur in der Mitte
 const WAKE_ARMS = [
@@ -150,7 +252,9 @@ const point = new THREE.Vector3();
 const corner = new THREE.Vector3();
 
 // Ein Schiff auf einer Route: hängt an der Erde (dreht mit), fährt hin und her
-export default function Ship({ label = "Containerschiff", waypoints, speed = 0.004, size = 0.06, start = 0 }) {
+// model: "container" | "cruise" | "freighter"
+export default function Ship({ label = "Containerschiff", model = "container", waypoints, speed = 0.004, size = 0.06, start = 0 }) {
+  const Model = MODELS[model];
   const frame = useRef();
   const ship = useRef();
   const wake = useRef();
@@ -230,7 +334,7 @@ export default function Ship({ label = "Containerschiff", waypoints, speed = 0.0
   return (
     <group ref={frame} matrixAutoUpdate={false}>
       <group ref={ship}>
-        <ContainerShipModel />
+        <Model />
       </group>
       <mesh ref={wake} geometry={wakeGeo} frustumCulled={false}>
         <shaderMaterial
