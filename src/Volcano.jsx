@@ -20,8 +20,8 @@ const glowVertex = /* glsl */ `
   }
 `;
 
-// Flacher Berg statt Kegel: Höhe fällt weich zum Fuss ab, oben nur eine kleine Mulde
-const HEIGHT = 0.3;
+// Berg statt Kegel: Höhe fällt weich zum Fuss ab, oben nur eine kleine Mulde
+const HEIGHT = 0.55;
 const mountainHeight = (r) => (HEIGHT * (1 / (1 + Math.pow(r / 0.36, 2.2)) - 0.06 * r));
 const CRATER = mountainHeight(0.08);
 
@@ -71,7 +71,7 @@ const worldUp = new THREE.Vector3();
 
 // Vulkan: raucht ständig ein wenig; in Abständen bricht er aus, mit Aschewolke, Glut und hellem Krater.
 // Hängt an der Erde und dreht mit.
-export default function Volcano({ label = "Vulkan", size = 0.045 }) {
+export default function Volcano({ label = "Vulkan", size = 0.013 }) {
   const frame = useRef();
   const mountain = useRef();
   const glow = useRef();
@@ -95,11 +95,13 @@ export default function Volcano({ label = "Vulkan", size = 0.045 }) {
   );
   const glowUniforms = useMemo(() => ({ uColor: { value: new THREE.Color("#ff9a4a") }, uOpacity: { value: 0 } }), []);
   const state = useRef({ time: 0 });
+  const landColor = useMemo(() => new THREE.Color("#9a8bb4"), []);
 
   const c = useControls(
     label,
     {
-      size: { value: size, min: 0.02, max: 0.2, label: "Grösse" },
+      size: { value: size, min: 0.005, max: 0.08, label: "Grösse Berg" },
+      effects: { value: 0.04, min: 0.01, max: 0.15, label: "Grösse Rauch" },
       interval: { value: 45, min: 10, max: 180, label: "Ausbruch alle (s)" },
       eruption: { value: 9, min: 2, max: 30, label: "Ausbruch dauert (s)" },
       smoke: { value: 1, min: 0, max: 3, label: "Rauch" },
@@ -118,11 +120,14 @@ export default function Volcano({ label = "Vulkan", size = 0.045 }) {
     frame.current.matrix.copy(globe.matrixWorld);
     const sun = globe.material.uniforms.uSunDirection.value;
 
-    const scale = c.size * style.scale;
-    mountain.current.scale.setScalar(scale);
-    crater.copy(site.up).multiplyScalar(1 + CRATER * scale);
-    // Grösse der Wolken folgt der Vulkangrösse (Werte gelten für die Standardgrösse)
+    // Berg in echter Grösse (Ätna auf Sizilien); Rauch und Glut eigenständig, sonst wären sie unsichtbar klein
+    const mountainScale = c.size * style.scale;
+    mountain.current.scale.setScalar(mountainScale);
+    crater.copy(site.up).multiplyScalar(1 + CRATER * mountainScale);
+    const scale = c.effects * style.scale;
     const k = scale / 0.042;
+    // Farbe wie das Land der Erde, damit der Berg zu Sizilien gehört
+    landColor.copy(globe.material.uniforms.uLandDay.value);
 
     // Ausbruch: schnell an, langsam ab
     const cycle = s.time % c.interval;
@@ -175,7 +180,7 @@ export default function Volcano({ label = "Vulkan", size = 0.045 }) {
     <group ref={frame} matrixAutoUpdate={false}>
       <group ref={mountain} position={site.up.clone()} quaternion={site.quaternion}>
         <mesh geometry={geometry}>
-          <Paint color="#9a8bb4" noiseScale={5} />
+          <Paint color={landColor} noiseScale={5} />
         </mesh>
         {/* Lavaströme leuchten nachts */}
         {LAVA.map(({ angle, length, slope, x, y }) => (
