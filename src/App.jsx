@@ -159,10 +159,12 @@ export default function App() {
         <Stars />
         <Globe />
         <Meteor />
+        {/* Grössen nach echter Länge gestaffelt (gestaucht, damit alle erkennbar bleiben):
+            Containerschiff ~400 m, Kreuzfahrtschiff ~300 m, Frachter ~190 m, Forschungsschiff ~120 m */}
         <Ship label="Containerschiff" model="container" waypoints={ATLANTIC_ROUTE} start={0.35} />
         <Ship label="Kreuzfahrtschiff" model="cruise" waypoints={PACIFIC_ROUTE} start={0.2} size={0.055} />
-        <Ship label="Forschungsschiff" model="research" waypoints={SOUTHERN_OCEAN_ROUTE} start={0.4} size={0.08} speed={0.0025} />
-        <Ship label="Frachter" model="freighter" waypoints={INDIAN_ROUTE} start={0.6} size={0.055} speed={0.003} />
+        <Ship label="Forschungsschiff" model="research" waypoints={SOUTHERN_OCEAN_ROUTE} start={0.4} size={0.042} speed={0.0025} />
+        <Ship label="Frachter" model="freighter" waypoints={INDIAN_ROUTE} start={0.6} size={0.048} speed={0.003} />
         <Balloon label="Ballon Klassik" shape="classic" stripeA="#5b7fe2" stripeB="#e8dfb4" angle={-62} height={-0.45} />
         <Balloon
           label="Ballon Zwiebel"
