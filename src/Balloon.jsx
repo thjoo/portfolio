@@ -23,7 +23,8 @@ function balloonProfile(segments = 48) {
   // Kleine Öffnung (Hals) unten
   const last = points[points.length - 1];
   points.push(new THREE.Vector2(Math.max(last.x, 0.14), last.y - 0.05));
-  return points;
+  // LatheGeometry erwartet die Punkte von unten nach oben, sonst zeigen die Flächen nach innen
+  return points.reverse();
 }
 
 const DOWN = new THREE.Vector3(0, -1, 0);
