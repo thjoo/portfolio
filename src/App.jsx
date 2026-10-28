@@ -19,6 +19,16 @@ const ATLANTIC_ROUTE = [
   [49.6, -4.0],
 ];
 
+// Südatlantik: Falklandinseln -> an Südgeorgien vorbei -> Richtung Weddellmeer (Forschungsschiff).
+// Geprüft gegen die Landmaske (auch 0.3°/0.5° daneben frei)
+const SOUTHERN_OCEAN_ROUTE = [
+  [-50.2, -55.5],
+  [-52.2, -45.0],
+  [-53.0, -34.0],
+  [-57.0, -28.0],
+  [-61.0, -22.0],
+];
+
 // Pazifik: Hawaii -> Tahiti (Kreuzfahrt). Geprüft gegen die Landmaske, auch 0.25° daneben frei
 const PACIFIC_ROUTE = [
   [20.4, -157.4],
@@ -151,6 +161,7 @@ export default function App() {
         <Meteor />
         <Ship label="Containerschiff" model="container" waypoints={ATLANTIC_ROUTE} start={0.35} />
         <Ship label="Kreuzfahrtschiff" model="cruise" waypoints={PACIFIC_ROUTE} start={0.2} size={0.055} />
+        <Ship label="Forschungsschiff" model="research" waypoints={SOUTHERN_OCEAN_ROUTE} start={0.4} size={0.08} speed={0.0025} />
         <Ship label="Frachter" model="freighter" waypoints={INDIAN_ROUTE} start={0.6} size={0.055} speed={0.003} />
         <Balloon label="Ballon Klassik" shape="classic" stripeA="#5b7fe2" stripeB="#e8dfb4" angle={-62} height={-0.45} />
         <Balloon

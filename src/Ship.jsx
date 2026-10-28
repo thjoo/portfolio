@@ -257,7 +257,107 @@ function FreighterModel() {
   );
 }
 
-const MODELS = { container: ContainerShipModel, cruise: CruiseShipModel, freighter: FreighterModel };
+// Forschungsschiff (nach dem Vorbild von Polarforschungsschiffen): roter Rumpf, weisser mehrstöckiger
+// Aufbau vorne mit Brücke und Mast mit Radarkuppeln, roter Schornstein mit weissem Band,
+// Arbeitsdeck am Heck mit orangem A-Rahmen und Kran
+function ResearchShipModel() {
+  const hull = useMemo(() => hullGeometry({ depth: 0.18, width: 0.23 }), []);
+  const blocks = [
+    { x: 0.28, length: 0.62, width: 0.42, y: 0.18, height: 0.13 },
+    { x: 0.32, length: 0.46, width: 0.38, y: 0.31, height: 0.11 },
+    { x: 0.36, length: 0.28, width: 0.34, y: 0.42, height: 0.08 },
+  ];
+  return (
+    <group>
+      <mesh geometry={hull}>
+        <Paint color="#c9413a" />
+      </mesh>
+      {/* Weisser Streifen am Rumpf */}
+      {[-1, 1].map((s) => (
+        <mesh key={s} position={[0.0, 0.15, s * 0.232]}>
+          <boxGeometry args={[1.9, 0.02, 0.004]} />
+          <Paint color="#f1edf8" />
+        </mesh>
+      ))}
+      {/* Deck */}
+      <mesh position={[0.05, 0.185, 0]}>
+        <boxGeometry args={[1.9, 0.01, 0.4]} />
+        <Paint color="#8a8fb8" boxEdges />
+      </mesh>
+      {/* Weisser Aufbau, gestaffelt */}
+      {blocks.map((b, i) => (
+        <mesh key={i} position={[b.x, b.y + b.height / 2, 0]}>
+          <boxGeometry args={[b.length, b.height, b.width]} />
+          <Paint color="#f4f1fa" boxEdges />
+        </mesh>
+      ))}
+      {/* Fensterbänder an den Seiten der unteren Decks */}
+      {blocks.slice(0, 2).map((b, i) =>
+        [-1, 1].map((s) => (
+          <mesh key={`${i}${s}`} position={[b.x, b.y + b.height * 0.55, s * (b.width / 2 + 0.002)]}>
+            <boxGeometry args={[b.length * 0.85, b.height * 0.25, 0.004]} />
+            <Paint color="#3b3a78" glow={WINDOW_GLOW} />
+          </mesh>
+        ))
+      )}
+      <BridgeWindows x={0.36} y={0.47} depth={0.28} width={0.34} />
+      {/* Mast mit Radarkuppeln */}
+      <mesh position={[0.3, 0.6, 0]}>
+        <boxGeometry args={[0.03, 0.2, 0.03]} />
+        <Paint color="#f4f1fa" />
+      </mesh>
+      {[-1, 1].map((s) => (
+        <mesh key={s} position={[0.3, 0.66, s * 0.07]}>
+          <sphereGeometry args={[0.035, 16, 12]} />
+          <Paint color="#f4f1fa" />
+        </mesh>
+      ))}
+      {/* Schornstein: rot mit weissem Band */}
+      <group position={[-0.05, 0.3, 0]}>
+        <mesh>
+          <boxGeometry args={[0.13, 0.22, 0.14]} />
+          <Paint color="#c9413a" boxEdges />
+        </mesh>
+        <mesh position={[0, 0.04, 0]}>
+          <boxGeometry args={[0.135, 0.04, 0.145]} />
+          <Paint color="#f1edf8" />
+        </mesh>
+      </group>
+      {/* Kran mittschiffs */}
+      <group position={[-0.35, 0.19, 0.08]}>
+        <mesh position={[0, 0.1, 0]}>
+          <boxGeometry args={[0.04, 0.2, 0.04]} />
+          <Paint color="#e9874a" />
+        </mesh>
+        <mesh position={[-0.1, 0.22, 0]} rotation={[0, 0, 1.0]}>
+          <boxGeometry args={[0.018, 0.3, 0.018]} />
+          <Paint color="#e9874a" />
+        </mesh>
+      </group>
+      {/* A-Rahmen am Heck */}
+      <group position={[-0.95, 0.19, 0]}>
+        {[-1, 1].map((s) => (
+          <mesh key={s} position={[0, 0.12, s * 0.15]} rotation={[0, 0, -0.25]}>
+            <boxGeometry args={[0.03, 0.26, 0.03]} />
+            <Paint color="#e9874a" />
+          </mesh>
+        ))}
+        <mesh position={[-0.03, 0.245, 0]}>
+          <boxGeometry args={[0.03, 0.03, 0.33]} />
+          <Paint color="#e9874a" />
+        </mesh>
+      </group>
+      <NavigationLights beam={0.22} sideX={0.5} sideY={0.48} mastX={0.3} mastY={0.74} sternY={0.24} />
+    </group>
+  );
+}
+
+const MODELS = {
+  container: ContainerShipModel,
+  cruise: CruiseShipModel,
+  freighter: FreighterModel,
+  research: ResearchShipModel,
+};
 
 const WAKE_POINTS = 24;
 // Drei Schaumbänder: links, rechts (V-förmig auseinander) und eine kurze Spur in der Mitte
@@ -298,7 +398,7 @@ const point = new THREE.Vector3();
 const corner = new THREE.Vector3();
 
 // Ein Schiff auf einer Route: hängt an der Erde (dreht mit), fährt hin und her
-// model: "container" | "cruise" | "freighter"
+// model: "container" | "cruise" | "freighter" | "research"
 export default function Ship({ label = "Containerschiff", model = "container", waypoints, speed = 0.004, size = 0.06, start = 0 }) {
   const Model = MODELS[model];
   const frame = useRef();
