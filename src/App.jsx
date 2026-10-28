@@ -85,6 +85,10 @@ function Post() {
     u.get("uEarthGrain").value = earth.grain;
     u.get("uEarthPooling").value = earth.pooling;
     u.get("uEarthFollow").value = earth.follow ? 1 : 0;
+    // Matrizen für dieses Bild aktualisieren: Kamera (OrbitControls) und Erde (Rotation) haben sich
+    // in useFrame bewegt, three.js rechnet matrixWorld sonst erst beim Rendern nach -> Eis hinkt nach
+    camera.updateMatrixWorld();
+    scene.getObjectByName("globe")?.updateWorldMatrix(true, false);
     u.get("uInverseProjection").value.copy(camera.projectionMatrixInverse);
     u.get("uCameraWorld").value.copy(camera.matrixWorld);
     u.get("uViewMatrix").value.copy(camera.matrixWorldInverse);

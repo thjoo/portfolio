@@ -178,6 +178,8 @@ export default function Ship({ label = "Containerschiff", waypoints, speed = 0.0
     const globe = scene.getObjectByName("globe");
     if (!globe) return;
     // Rahmen folgt der Erde: alles darin ist in Erd-Koordinaten (Einheitskugel)
+    // Erst die aktuelle Rotation der Erde übernehmen, sonst hinkt das Schiff ein Bild hinterher
+    globe.updateWorldMatrix(true, false);
     frame.current.matrix.copy(globe.matrixWorld);
 
     // Hin und her über die Route; Tempo in "Anteil der Route pro Sekunde", unabhängig von der Länge
