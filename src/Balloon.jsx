@@ -54,10 +54,6 @@ function useBalloonStyle() {
   );
 }
 
-// Doppelballon: Abstand der Hüllen von der Mitte und Neigung nach aussen
-const TWIN_OFFSET = 0.72;
-const TWIN_TILT = 0.16;
-
 const DOWN = new THREE.Vector3(0, -1, 0);
 const toEarth = new THREE.Vector3();
 
@@ -105,8 +101,7 @@ function Envelope({ form, stripeA, stripeB, stripes, style, position = [0, 0, 0]
   );
 }
 
-// Ein Ballon: kind "hot" (Heissluft mit Korb), "double" (zwei Hüllen an einem Korb)
-// oder "weather" (Wetterballon mit Schnur und Messgerät). twin: Farben der zweiten Hülle beim Doppelballon
+// Ein Ballon: kind "hot" (Heissluft mit Korb) oder "weather" (Wetterballon mit Schnur und Messgerät)
 export default function Balloon({
   label,
   kind = "hot",
@@ -120,7 +115,6 @@ export default function Balloon({
   distance = 1.35,
   phase = 0,
   payloadColor = "#c9a25c",
-  twin = { stripeA: "#3fa7a0", stripeB: "#efe2bf", stripes: 6 },
 }) {
   const orbit = useRef();
   const body = useRef();
@@ -134,13 +128,6 @@ export default function Balloon({
       stripeA: { value: stripeA, label: "Farbe 1" },
       stripeB: { value: stripeB, label: "Farbe 2" },
       stripes: { value: stripes, min: 0, max: 16, step: 1, label: "Streifen" },
-      ...(kind === "double"
-        ? {
-            twinA: { value: twin.stripeA, label: "2. Hülle Farbe 1" },
-            twinB: { value: twin.stripeB, label: "2. Hülle Farbe 2" },
-            twinStripes: { value: twin.stripes, min: 0, max: 16, step: 1, label: "2. Hülle Streifen" },
-          }
-        : {}),
       size: { value: size, min: 0.02, max: 0.2, label: "Grösse" },
       angle: { value: angle, min: -180, max: 180, step: 1, label: "Position (°)" },
       height: { value: height, min: -1.4, max: 1.4, label: "Höhe" },
@@ -155,16 +142,6 @@ export default function Balloon({
 
   const ropes = useMemo(() => {
     if (kind === "weather") return [[[0, neckY, 0], [0, neckY - 1.6, 0]]];
-    if (kind === "double") {
-      // Von beiden Hälsen schräg zum gemeinsamen Korb in der Mitte
-      return [-1, 1].flatMap((side) =>
-        [-1, 1].map((depth) => [
-          // Neigung nach aussen verschiebt den Hals zur Mitte hin
-          [side * (TWIN_OFFSET + Math.sin(TWIN_TILT) * neckY), neckY * Math.cos(TWIN_TILT), depth * form.neck],
-          [side * 0.1, neckY - 0.4, depth * 0.1],
-        ])
-      );
-    }
     return [0, 1, 2, 3].map((i) => {
       const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
       return [
@@ -173,7 +150,7 @@ export default function Balloon({
       ];
     });
   }, [kind, neckY, form.neck]);
-  const payloadY = kind === "weather" ? neckY - 1.68 : kind === "double" ? neckY - 0.49 : neckY - 0.35;
+  const payloadY = kind === "weather" ? neckY - 1.68 : neckY - 0.35;
   const payloadSize = kind === "weather" ? [0.16, 0.13, 0.16] : [0.22, 0.18, 0.22];
 
   useFrame((state, delta) => {
@@ -210,16 +187,7 @@ export default function Balloon({
         <group position={[0, topY, 0]}>
           <group ref={pendulumRef}>
             <group position={[0, -topY, 0]}>
-              {kind === "double" ? (
-                <>
-                  <Envelope form={form} stripeA={c.stripeA} stripeB={c.stripeB} stripes={c.stripes} style={style}
-                    position={[-TWIN_OFFSET, 0, 0]} tilt={TWIN_TILT} />
-                  <Envelope form={form} stripeA={c.twinA} stripeB={c.twinB} stripes={c.twinStripes} style={style}
-                    position={[TWIN_OFFSET, 0, 0]} tilt={-TWIN_TILT} />
-                </>
-              ) : (
-                <Envelope form={form} stripeA={c.stripeA} stripeB={c.stripeB} stripes={c.stripes} style={style} />
-              )}
+              <Envelope form={form} stripeA={c.stripeA} stripeB={c.stripeB} stripes={c.stripes} style={style} />
               {ropes.map((points, i) => (
                 <Line key={i} points={points} color="#2e2860" lineWidth={kind === "weather" ? 1.2 : 1.6} />
               ))}
