@@ -1,7 +1,7 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
+import { OrbitControls, PerformanceMonitor } from "@react-three/drei";
 import { EffectComposer, Kuwahara } from "@react-three/postprocessing";
 import { Leva, useControls } from "leva";
 import Globe from "./Globe.jsx";
@@ -156,10 +156,19 @@ function Post() {
 }
 
 export default function App() {
+  // Auflösung: höchstens 1.5-fach (Retina mit 2× kostet fast doppelt so viele Pixel, sieht im Aquarell
+  // kaum schärfer aus). Wird es ruckelig, automatisch auf 1× herunter, bei Luft wieder hoch.
+  const [dpr, setDpr] = useState(Math.min(window.devicePixelRatio, 1.5));
   return (
     <>
       <Leva collapsed />
-      <Canvas camera={{ position: [0, 0, 3.6], fov: 40 }} dpr={[1, 2]}>
+      <Canvas camera={{ position: [0, 0, 3.6], fov: 40 }} dpr={dpr}>
+        <PerformanceMonitor
+          onDecline={() => setDpr(1)}
+          onIncline={() => setDpr(Math.min(window.devicePixelRatio, 1.5))}
+          flipflops={3}
+          onFallback={() => setDpr(1)}
+        />
         <Background />
         <Stars />
         <Globe />

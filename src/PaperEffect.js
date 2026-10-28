@@ -54,10 +54,12 @@ const fragmentShader = /* glsl */ `
     vec3 n = abs(normalize(pos));
     n = pow(n, vec3(4.0));
     n /= n.x + n.y + n.z;
-    vec2 q = pos.xy * 0.5;
-    return paperHeight(pos.zy * 0.5, scale, fibers, tooth, grain) * n.x
-      + paperHeight(pos.xz * 0.5 + 7.0, scale, fibers, tooth, grain) * n.y
-      + paperHeight(q + 13.0, scale, fibers, tooth, grain) * n.z;
+    // Ebenen mit kaum Gewicht überspringen: meist zählen nur eine oder zwei der drei Projektionen
+    float h = 0.0;
+    if (n.x > 0.02) h += paperHeight(pos.zy * 0.5, scale, fibers, tooth, grain) * n.x;
+    if (n.y > 0.02) h += paperHeight(pos.xz * 0.5 + 7.0, scale, fibers, tooth, grain) * n.y;
+    if (n.z > 0.02) h += paperHeight(pos.xy * 0.5 + 13.0, scale, fibers, tooth, grain) * n.z;
+    return h / max((n.x > 0.02 ? n.x : 0.0) + (n.y > 0.02 ? n.y : 0.0) + (n.z > 0.02 ? n.z : 0.0), 1e-3);
   }
 
   void mainUv(inout vec2 uv) {
@@ -70,7 +72,6 @@ const fragmentShader = /* glsl */ `
     vec2 p = uv * vec2(uAspect, 1.0);
     float isEarth = step(depth, 0.9999);
 
-    float bg = paperHeight(p, uBgScale, uBgFibers, uBgTooth, uBgGrain);
     vec3 color = inputColor.rgb;
     vec3 local = vec3(0.0);
     float onGlobe = 0.0;
@@ -97,7 +98,8 @@ const fragmentShader = /* glsl */ `
       float shadowPressure;
       float pressure = scribbleBall(local, pole, radiusDeg, 42.0 * uScribbleDensity, uScribbleWidth, uIceIrregular,
                                     shadowDir, uIceThickness, shadowPressure);
-      float tooth = crayonTooth(local, uEarthScale * 0.7);
+      // Kreide-Zahn nur dort rechnen, wo überhaupt Kreide liegt (spart drei Rauschwerte pro Erdpixel)
+      float tooth = pressure + shadowPressure > 0.0 ? crayonTooth(local, uEarthScale * 0.7) : 0.0;
       float sun = dot(normalize(world.xyz), normalize(uSunDirection));
       // Wie die Erde: auf der Nachtseite dunkel und kühl, im Tag hell
       float day = smoothstep(-0.15, 0.2, sun);
@@ -123,20 +125,24 @@ const fragmentShader = /* glsl */ `
       color = mix(color, iceColor, clamp(scribble, 0.0, 1.0));
     }
 
-    float earth;
-    if (uEarthFollow > 0.5 && onGlobe > 0.5) {
-      earth = sphericalPaper(local, uEarthScale, uEarthFibers, uEarthTooth, uEarthGrain);
+    // Jeder Pixel ist entweder Hintergrund oder Erde: nur das passende Papier rechnen
+    float h;
+    if (isEarth < 0.5) {
+      h = paperHeight(p, uBgScale, uBgFibers, uBgTooth, uBgGrain);
     } else {
-      earth = paperHeight(p, uEarthScale, uEarthFibers, uEarthTooth, uEarthGrain);
+      if (uEarthFollow > 0.5 && onGlobe > 0.5) {
+        h = sphericalPaper(local, uEarthScale, uEarthFibers, uEarthTooth, uEarthGrain);
+      } else {
+        h = paperHeight(p, uEarthScale, uEarthFibers, uEarthTooth, uEarthGrain);
+      }
+      // Auf der Erde sammelt sich Pigment in den Papiertälern: Täler dunkler als Erhebungen hell
+      h = h < 0.0 ? h * uEarthPooling : h * (2.0 - uEarthPooling) * 0.5;
     }
-    // Auf der Erde sammelt sich Pigment in den Papiertälern: Täler dunkler als Erhebungen hell
-    earth = earth < 0.0 ? earth * uEarthPooling : earth * (2.0 - uEarthPooling) * 0.5;
 
     // Objekte vor der Erde (Schiffe, Ballone) aus dem Bild vor Kuwahara: Kanten bleiben klar
     float isObject = isEarth * (1.0 - onGlobe);
     color = mix(color, texture2D(uSharp, uv).rgb, isObject * uObjectSharp);
 
-    float h = mix(bg, earth, isEarth);
     outputColor = vec4(color * (1.0 + h), inputColor.a);
   }
 `;
