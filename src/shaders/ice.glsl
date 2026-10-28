@@ -42,8 +42,11 @@ float scribbleBall(vec3 p, float pole, float radiusDeg, float loops, float width
     // Abstand zur Schlaufe in Pixeln (Gradient der Ellipse ~ 1 / mittlerer Radius)
     float dPx = abs(f) * (a + b) * 0.5 / pixel;
     float halfWidth = widthPx * (0.75 + 0.5 * scribbleHash(k + 6.1));
-    // Dicker Farbstift: in der Strichmitte voller Druck, zum Rand weniger (dort zeigt sich das Papierkorn)
-    float stroke = 1.0 - smoothstep(halfWidth * 0.25, halfWidth + 1.0, dPx);
+    // Dicker Farbstift: breites, weich abfallendes Druckprofil wie am Rand der Füllung.
+    // Im Abfall entscheidet das Papierkorn, wo Pigment haftet -> ausgefranste Ränder.
+    float stroke = 1.0 - smoothstep(0.0, halfWidth * 2.4, dPx);
+    // Druck schwankt entlang des Strichs: stellenweise trocken und lückig
+    stroke *= 0.78 + 0.32 * snoise(p * 22.0 + k);
     // Manche Schlaufen sind nur Bögen (Stift abgesetzt)
     float arcStart = scribbleHash(k + 8.3) * 6.28318;
     float arcLength = 3.5 + scribbleHash(k + 9.1) * 3.5;
