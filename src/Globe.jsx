@@ -36,6 +36,8 @@ export default function Globe() {
       uIceIrregular: { value: 0 },
       uIceCoast: { value: 0 },
       uIceSoftness: { value: 0 },
+      uSnowStart: { value: 58 },
+      uSnowEnd: { value: 74 },
       uScribble: { value: 0 },
       uScribbleDensity: { value: 1 },
       uScribbleWidth: { value: 1.6 },
@@ -77,6 +79,8 @@ export default function Globe() {
       iceIrregular: { value: 1, min: 0, max: 2, label: "Knäuel unordentlich" },
       iceCoast: { value: 0.35, min: 0, max: 1, label: "Küste im Eis" },
       iceSoftness: { value: 0.14, min: 0.005, max: 0.3, label: "Eis-Übergang weich" },
+      snowStart: { value: 58, min: 30, max: 85, step: 1, label: "Schnee ab Breite (°)" },
+      snowEnd: { value: 74, min: 35, max: 90, step: 1, label: "Schnee deckend ab (°)" },
       scribble: { value: 1, min: 0, max: 1, label: "Gekritzel" },
       scribbleDensity: { value: 1, min: 0.2, max: 1.8, label: "Schlaufen (Anzahl)" },
       scribbleWidth: { value: 3.2, min: 0.5, max: 8, label: "Strichbreite (px)" },
@@ -113,6 +117,8 @@ export default function Globe() {
     u.uIceIrregular.value = c.iceIrregular;
     u.uIceCoast.value = c.iceCoast;
     u.uIceSoftness.value = c.iceSoftness;
+    u.uSnowStart.value = c.snowStart;
+    u.uSnowEnd.value = Math.max(c.snowEnd, c.snowStart + 1);
     u.uScribble.value = c.scribble;
     u.uScribbleDensity.value = c.scribbleDensity;
     u.uScribbleWidth.value = c.scribbleWidth;

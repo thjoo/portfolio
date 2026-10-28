@@ -21,6 +21,8 @@ uniform float uIceSouth;
 uniform float uIceIrregular;
 uniform float uIceCoast;
 uniform float uIceSoftness;
+uniform float uSnowStart;
+uniform float uSnowEnd;
 uniform float uCityDensity;
 uniform float uSpecular;
 uniform float uFresnel;
@@ -65,6 +67,14 @@ void main() {
   float edgeNoise = 0.6 + 0.4 * abs(snoise(p * 9.0));
   ground *= 1.0 - landEdge * uEdgeDarkening * 1.6 * edgeNoise;
   ocean *= 1.0 - oceanEdge * uEdgeDarkening * 0.6 * edgeNoise;
+
+  // Land geht gegen die Pole ins Weiss über (etwa die sommerliche Schnee-/Eisgrenze).
+  // Breite in Grad, mit Noise für eine gemalte, unregelmässige Grenze; nachts dunkler.
+  float absLatitude = degrees(asin(clamp(abs(p.y), 0.0, 1.0)));
+  float snowNoise = fbm(p * 4.0 + 5.0) * 6.0 + snoise(p * 14.0) * 1.5;
+  float snow = smoothstep(uSnowStart, uSnowEnd, absLatitude + snowNoise);
+  vec3 snowColor = mix(uLandNight * 1.6, uIce, day) * (1.0 + wash * uPigment * 0.5);
+  ground = mix(ground, snowColor, snow);
 
   vec3 color = mix(ocean, ground, land);
 
