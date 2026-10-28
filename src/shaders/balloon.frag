@@ -1,4 +1,5 @@
-// Heissluftballon im Aquarell-Stil: Streifen, weiches Licht, Pigment-Wolken, dunklerer Rand
+// Heissluftballon im Aquarell-Stil: verlaufende Streifen mit Pigmenträndern, jeder Streifen
+// leicht anders getönt, ausgesparte helle Papierstelle, Pigment-Wolken, Körnung, dunklerer Rand.
 uniform vec3 uSunDirection;
 uniform vec3 uStripeA;
 uniform vec3 uStripeB;
@@ -6,6 +7,8 @@ uniform float uStripes;
 uniform float uShade;
 uniform float uPigment;
 uniform float uEdge;
+uniform float uBleed;
+uniform float uGranulation;
 
 varying vec2 vUv;
 varying vec3 vNormalW;
@@ -14,26 +17,50 @@ varying vec3 vPosition;
 
 #include ./noise.glsl
 
+float hash(float n) {
+  return fract(sin(n * 91.7 + 13.3) * 43758.5453);
+}
+
 void main() {
   vec3 p = vPosition * 3.0;
-
-  // Streifen über den Umfang, Grenzen leicht wackelig wie von Hand
-  float wobble = snoise(p * 2.0) * 0.06 + snoise(p * 7.0) * 0.02;
-  float stripe = fract(vUv.x * uStripes + wobble);
-  float stripeMask = smoothstep(0.47, 0.53, stripe) * (1.0 - smoothstep(0.97, 1.0, stripe));
-  vec3 color = mix(uStripeA, uStripeB, stripeMask);
-
-  // Weiches Licht von der Sonne (umwickelt, damit die Schattenseite nicht schwarz wird)
   vec3 normal = normalize(vNormalW);
+  vec3 viewDir = normalize(vViewDir);
+
+  // Streifen über den Umfang; Grenzen wackeln und verlaufen ineinander
+  float wobble = snoise(p * 1.8) * 0.08 + snoise(p * 6.0) * 0.03;
+  float s = vUv.x * uStripes + wobble;
+  float index = floor(s);
+  float local = fract(s);
+  // Abwechselnd Farbe A und B, Übergang weich (Farbe läuft in die nasse Nachbarfläche)
+  float parity = mod(index, 2.0);
+  float edgeA = smoothstep(0.0, uBleed, local) * (1.0 - smoothstep(1.0 - uBleed, 1.0, local));
+  vec3 own = parity < 0.5 ? uStripeA : uStripeB;
+  vec3 other = parity < 0.5 ? uStripeB : uStripeA;
+  // Jeder Streifen von Hand gemischt: leicht andere Helligkeit und Sättigung
+  float mixVariation = (hash(index + 3.0) - 0.5) * 0.18;
+  own *= 1.0 + mixVariation;
+  vec3 color = mix(mix(own, other, 0.5), own, edgeA);
+
+  // Pigmentrand: Farbe sammelt sich beim Trocknen an der Streifengrenze
+  float border = 1.0 - smoothstep(0.0, 0.12, min(local, 1.0 - local));
+  color *= 1.0 - border * uEdge * 0.45 * (0.6 + 0.4 * abs(snoise(p * 8.0)));
+
+  // Weiches Licht von der Sonne (umwickelt, die Schattenseite wird nicht schwarz)
   float diffuse = dot(normal, normalize(uSunDirection)) * 0.5 + 0.5;
-  color *= mix(1.0 - uShade, 1.0 + uShade * 0.25, smoothstep(0.1, 0.9, diffuse));
+  color *= mix(1.0 - uShade, 1.0 + uShade * 0.2, smoothstep(0.1, 0.9, diffuse));
 
-  // Pigment-Wolken
-  color *= 1.0 + fbm(p * 1.5 + 2.0) * uPigment;
+  // Ausgesparte Papierstelle: auf der Sonnenseite bleibt das Papier fast weiss
+  vec3 halfway = normalize(normalize(uSunDirection) + viewDir);
+  float highlight = smoothstep(0.82, 0.97, dot(normal, halfway) + snoise(p * 3.0) * 0.06);
+  color = mix(color, vec3(0.96, 0.95, 1.0), highlight * 0.75);
 
-  // Dunklerer Pigmentrand am Umriss
-  float rim = pow(1.0 - max(dot(normal, normalize(vViewDir)), 0.0), 2.5);
-  color *= 1.0 - rim * uEdge * (0.7 + 0.3 * snoise(p * 5.0));
+  // Pigment-Wolken und Körnung
+  color *= 1.0 + fbm(p * 1.4 + 2.0) * uPigment;
+  color *= 1.0 + (snoise(p * 40.0) * 0.6 + snoise(p * 13.0) * 0.4) * uGranulation;
+
+  // Dunklerer, unregelmässiger Pigmentrand am Umriss
+  float rim = pow(1.0 - max(dot(normal, viewDir), 0.0), 2.2);
+  color *= 1.0 - rim * uEdge * (0.6 + 0.4 * snoise(p * 5.0));
 
   gl_FragColor = vec4(color, 1.0);
   #include <tonemapping_fragment>

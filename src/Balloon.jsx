@@ -3,10 +3,11 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Line } from "@react-three/drei";
 import { useControls, folder } from "leva";
 import * as THREE from "three";
-import vertexShader from "./shaders/balloon.vert?raw";
+import vertexSource from "./shaders/balloon.vert?raw";
 import fragmentSource from "./shaders/balloon.frag?raw";
 import noise from "./shaders/noise.glsl?raw";
 
+const vertexShader = vertexSource.replace("#include ./noise.glsl", noise);
 const fragmentShader = fragmentSource.replace("#include ./noise.glsl", noise);
 
 // Tropfenprofil für LatheGeometry: oben breit und rund, unten spitz zur Öffnung
@@ -27,13 +28,12 @@ function balloonProfile(segments = 48) {
 
 const DOWN = new THREE.Vector3(0, -1, 0);
 const toEarth = new THREE.Vector3();
-const swing = new THREE.Quaternion();
-const euler = new THREE.Euler();
 
 export default function Balloon() {
   const orbit = useRef();
   const body = useRef();
   const envelope = useRef();
+  const pendulumRef = useRef();
   const scene = useThree((state) => state.scene);
 
   const geometry = useMemo(() => new THREE.LatheGeometry(balloonProfile(), 64), []);
@@ -46,6 +46,9 @@ export default function Balloon() {
       uShade: { value: 0.4 },
       uPigment: { value: 0.2 },
       uEdge: { value: 0.4 },
+      uBleed: { value: 0.2 },
+      uGranulation: { value: 0.06 },
+      uOutlineWobble: { value: 0.02 },
     }),
     []
   );
@@ -56,10 +59,14 @@ export default function Balloon() {
       stripeB: { value: "#e8dfb4", label: "Streifen 2" },
       stripes: { value: 8, min: 2, max: 16, step: 1, label: "Streifen" },
       shade: { value: 0.4, min: 0, max: 0.8, label: "Schattierung" },
-      pigment: { value: 0.2, min: 0, max: 0.6, label: "Pigment-Wolken" },
-      edge: { value: 0.4, min: 0, max: 1, label: "Pigmentrand" },
+      pigment: { value: 0.3, min: 0, max: 0.6, label: "Pigment-Wolken" },
+      edge: { value: 0.55, min: 0, max: 1, label: "Pigmentrand" },
+      bleed: { value: 0.22, min: 0.02, max: 0.5, label: "Streifen verlaufen" },
+      granulation: { value: 0.06, min: 0, max: 0.2, label: "Körnung" },
+      outlineWobble: { value: 0.025, min: 0, max: 0.08, label: "Umriss wackelig" },
       size: { value: 0.08, min: 0.02, max: 0.2, label: "Grösse" },
-      tilt: { value: 0, min: -45, max: 45, step: 1, label: "Neigung zusätzlich (°)" },
+      swingAmount: { value: 7, min: 0, max: 25, label: "Pendeln (°)" },
+      swingSpeed: { value: 1, min: 0.1, max: 3, label: "Pendeln Tempo" },
       angle: { value: -62, min: -180, max: 180, step: 1, label: "Position (°)" },
       height: { value: -0.45, min: -1.2, max: 1.2, label: "Höhe" },
       distance: { value: 1.35, min: 1.05, max: 2, label: "Abstand" },
@@ -77,6 +84,9 @@ export default function Balloon() {
     u.uShade.value = c.shade;
     u.uPigment.value = c.pigment;
     u.uEdge.value = c.edge;
+    u.uBleed.value = c.bleed;
+    u.uGranulation.value = c.granulation;
+    u.uOutlineWobble.value = c.outlineWobble;
 
     // Langsam um die Erde, dazu leichtes Wippen und Pendeln
     orbit.current.rotation.y += delta * c.orbitSpeed;
@@ -88,14 +98,20 @@ export default function Balloon() {
       c.height + Math.sin(t * 0.8) * 0.012,
       Math.cos(a) * horizontal
     );
-    // Korb zeigt zur Erde: die -Y-Achse des Ballons auf den Erdmittelpunkt ausrichten,
-    // dazu etwas zusätzliche Neigung und leichtes Pendeln
+    // Korb zeigt zur Erde: die -Y-Achse des Ballons auf den Erdmittelpunkt ausrichten (keine Neigung)
     toEarth.copy(body.current.position).negate().normalize();
     body.current.quaternion.setFromUnitVectors(DOWN, toEarth);
-    swing.setFromEuler(
-      euler.set(Math.sin(t * 0.45) * 0.04, 0, THREE.MathUtils.degToRad(c.tilt) + Math.sin(t * 0.6) * 0.05)
+
+    const pendulum = pendulumRef.current;
+    // Pendeln: Ballon und Korb schwingen um einen Punkt oben an der Hülle.
+    // Zwei Schwingungen quer zur Erdrichtung mit verschiedenem Takt -> nicht mechanisch
+    const w = t * c.swingSpeed;
+    const amplitude = THREE.MathUtils.degToRad(c.swingAmount);
+    pendulum.rotation.set(
+      Math.sin(w * 1.3) * amplitude * 0.6 + Math.sin(w * 0.47) * amplitude * 0.25,
+      0,
+      Math.sin(w * 0.9 + 1.1) * amplitude
     );
-    body.current.quaternion.multiply(swing);
     body.current.scale.setScalar(c.size);
   });
 
@@ -114,16 +130,23 @@ export default function Balloon() {
   return (
     <group ref={orbit}>
       <group ref={body}>
-        <mesh ref={envelope} geometry={geometry}>
-          <shaderMaterial vertexShader={vertexShader} fragmentShader={fragmentShader} uniforms={uniforms} />
-        </mesh>
-        {ropes.map((points, i) => (
-          <Line key={i} points={points} color="#2e2860" lineWidth={1.6} />
-        ))}
-        <mesh position={[0, -1.53, 0]}>
-          <boxGeometry args={[0.22, 0.18, 0.22]} />
-          <meshBasicMaterial color="#c9a25c" />
-        </mesh>
+        {/* Drehpunkt oben an der Hülle, alles darunter pendelt */}
+        <group position={[0, 1.15, 0]}>
+          <group ref={pendulumRef}>
+            <group position={[0, -1.15, 0]}>
+              <mesh ref={envelope} geometry={geometry}>
+                <shaderMaterial vertexShader={vertexShader} fragmentShader={fragmentShader} uniforms={uniforms} />
+              </mesh>
+              {ropes.map((points, i) => (
+                <Line key={i} points={points} color="#2e2860" lineWidth={1.6} />
+              ))}
+              <mesh position={[0, -1.53, 0]}>
+                <boxGeometry args={[0.22, 0.18, 0.22]} />
+                <meshBasicMaterial color="#c9a25c" />
+              </mesh>
+            </group>
+          </group>
+        </group>
       </group>
     </group>
   );
