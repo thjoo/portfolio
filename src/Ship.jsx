@@ -3,6 +3,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useControls } from "leva";
 import * as THREE from "three";
 import Paint from "./Paint.jsx";
+import ShipLight from "./ShipLight.jsx";
 import { createRoute, findLandOnRoute } from "./route.js";
 import wakeVertex from "./shaders/wake.vert?raw";
 import wakeFragmentSource from "./shaders/wake.frag?raw";
@@ -81,6 +82,39 @@ function Containers({ seed = 7 }) {
   );
 }
 
+const WINDOW_GLOW = "#ffd98a";
+
+// Positionslichter wie auf echten Schiffen (Bug zeigt nach +x, Backbord = -z):
+// rot Backbord, grün Steuerbord, weiss Topplicht und Hecklicht. Nur nachts sichtbar.
+function NavigationLights({ beam, sideX, sideY, mastX, mastY, sternY }) {
+  return (
+    <group>
+      <ShipLight position={[sideX, sideY, -beam]} color="#ff5a4a" />
+      <ShipLight position={[sideX, sideY, beam]} color="#5dff9a" />
+      <ShipLight position={[mastX, mastY, 0]} color="#fff6dc" size={0.26} />
+      <ShipLight position={[-1.02, sternY, 0]} color="#fff6dc" size={0.18} />
+    </group>
+  );
+}
+
+// Fensterband vorne und an beiden Seiten eines Aufbaus; leuchtet nachts warm
+function BridgeWindows({ x, y, depth, width }) {
+  return (
+    <group>
+      <mesh position={[x + depth / 2 + 0.002, y, 0]}>
+        <boxGeometry args={[0.004, 0.05, width * 0.86]} />
+        <Paint color="#3b3a78" glow={WINDOW_GLOW} />
+      </mesh>
+      {[-1, 1].map((s) => (
+        <mesh key={s} position={[x, y, s * (width / 2 + 0.002)]}>
+          <boxGeometry args={[depth * 0.8, 0.05, 0.004]} />
+          <Paint color="#3b3a78" glow={WINDOW_GLOW} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 function ContainerShipModel() {
   const hull = useMemo(() => hullGeometry(), []);
   return (
@@ -108,6 +142,8 @@ function ContainerShipModel() {
         <boxGeometry args={[0.06, 0.14, 0.08]} />
         <Paint color="#d9614c" boxEdges />
       </mesh>
+      <BridgeWindows x={-0.82} y={0.43} depth={0.16} width={0.34} />
+      <NavigationLights beam={0.2} sideX={-0.74} sideY={0.47} mastX={-0.82} mastY={0.56} sternY={0.2} />
     </group>
   );
 }
@@ -139,7 +175,7 @@ function CruiseShipModel() {
           {[-1, 1].map((s) => (
             <mesh key={s} position={[d.x, d.y + d.height * 0.55, s * (d.width / 2 + 0.002)]}>
               <boxGeometry args={[d.length * 0.92, d.height * 0.28, 0.004]} />
-              <Paint color="#3b3a78" />
+              <Paint color="#3b3a78" glow={WINDOW_GLOW} glowStrength={0.95} />
             </mesh>
           ))}
         </group>
@@ -157,6 +193,14 @@ function CruiseShipModel() {
           </mesh>
         </group>
       ))}
+      {/* Fenster im Rumpf: eine Reihe Bullaugen-Band, nachts warm */}
+      {[-1, 1].map((s) => (
+        <mesh key={s} position={[-0.05, 0.12, s * 0.212]}>
+          <boxGeometry args={[1.5, 0.025, 0.004]} />
+          <Paint color="#3b3a78" glow={WINDOW_GLOW} glowStrength={0.8} />
+        </mesh>
+      ))}
+      <NavigationLights beam={0.19} sideX={0.25} sideY={0.4} mastX={0.15} mastY={0.5} sternY={0.24} />
     </group>
   );
 }
@@ -207,6 +251,8 @@ function FreighterModel() {
         <boxGeometry args={[0.07, 0.1, 0.08]} />
         <Paint color="#2a2650" boxEdges />
       </mesh>
+      <BridgeWindows x={-0.78} y={0.36} depth={0.26} width={0.3} />
+      <NavigationLights beam={0.17} sideX={-0.65} sideY={0.4} mastX={0.49} mastY={0.56} sternY={0.22} />
     </group>
   );
 }

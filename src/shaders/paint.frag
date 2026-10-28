@@ -8,6 +8,8 @@ uniform float uEdge;
 uniform float uGranulation;
 uniform float uNoiseScale;
 uniform float uBoxEdges;
+uniform vec3 uGlow;
+uniform float uGlowStrength;
 
 varying vec3 vNormalW;
 varying vec3 vViewDir;
@@ -38,6 +40,10 @@ void main() {
   float edgeWidth = 0.07 + 0.03 * snoise(p * 9.0);
   float edgeLine = 1.0 - smoothstep(edgeWidth * 0.4, edgeWidth, toEdge);
   color *= 1.0 - edgeLine * uBoxEdges * 0.5;
+
+  // Nachts leuchten (Fenster …): nur dort, wo die Erde zwischen Objekt und Sonne liegt
+  float night = 1.0 - earthShadow(vWorld, uSunDirection);
+  color = mix(color, uGlow, night * uGlowStrength);
 
   gl_FragColor = vec4(color, 1.0);
   #include <tonemapping_fragment>

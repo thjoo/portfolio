@@ -13,7 +13,8 @@ const fragmentShader = fragmentSource
 
 // Malmaterial als Kind eines Mesh: <mesh><Paint color="#…" /></mesh>
 // boxEdges: Kanten von Boxen mit einer dunkleren Pigmentlinie betonen
-export default function Paint({ color = "#ffffff", noiseScale = 3, boxEdges = false }) {
+// glow: Farbe, in der die Fläche nachts leuchtet (z. B. Fenster)
+export default function Paint({ color = "#ffffff", noiseScale = 3, boxEdges = false, glow = null, glowStrength = 0.9 }) {
   const material = useRef();
   const scene = useThree((state) => state.scene);
   const style = useObjectStyle();
@@ -27,6 +28,8 @@ export default function Paint({ color = "#ffffff", noiseScale = 3, boxEdges = fa
       uGranulation: { value: 0.06 },
       uNoiseScale: { value: 3 },
       uBoxEdges: { value: 0 },
+      uGlow: { value: new THREE.Color() },
+      uGlowStrength: { value: 0 },
     }),
     []
   );
@@ -43,6 +46,8 @@ export default function Paint({ color = "#ffffff", noiseScale = 3, boxEdges = fa
     u.uGranulation.value = style.granulation;
     u.uNoiseScale.value = noiseScale;
     u.uBoxEdges.value = boxEdges ? style.boxEdges : 0;
+    if (glow) u.uGlow.value.set(glow);
+    u.uGlowStrength.value = glow ? glowStrength : 0;
   });
 
   return (
