@@ -18,27 +18,23 @@ const ATLANTIC_ROUTE = [
   [49.6, -4.0],
 ];
 
-// Karibik: Miami -> Providence-Kanal (Bahamas) -> nördlich an Hispaniola und Puerto Rico vorbei
-// -> Kleine Antillen. Geprüft gegen die Landmaske (kein Land, auch nicht 0.2° daneben)
-const CARIBBEAN_ROUTE = [
-  [25.9, -79.7],
-  [26.0, -78.4],
-  [25.9, -76.9],
-  [24.8, -73.5],
-  [21.0, -69.5],
-  [19.4, -66.2],
-  [18.6, -64.0],
-  [16.5, -62.6],
-  [14.5, -61.6],
-  [12.6, -60.5],
+// Pazifik: Hawaii -> Tahiti (Kreuzfahrt). Geprüft gegen die Landmaske, auch 0.25° daneben frei
+const PACIFIC_ROUTE = [
+  [20.4, -157.4],
+  [12.0, -154.0],
+  [2.0, -151.5],
+  [-8.0, -150.5],
+  [-16.9, -149.9],
 ];
 
-// Südatlantik: Kapstadt -> Rio de Janeiro
-const SOUTH_ATLANTIC_ROUTE = [
-  [-34.6, 17.6],
-  [-31.0, 2.0],
-  [-27.0, -20.0],
-  [-24.2, -40.5],
+// Indik: Nordspitze Sumatras -> südlich an Sri Lanka vorbei -> Arabisches Meer. Geprüft wie oben
+const INDIAN_ROUTE = [
+  [6.2, 94.6],
+  [5.6, 88.0],
+  [5.4, 80.6],
+  [8.0, 70.0],
+  [11.5, 62.0],
+  [13.5, 57.5],
 ];
 import Background from "./Background.jsx";
 import { PaperEffect } from "./PaperEffect.js";
@@ -152,8 +148,8 @@ export default function App() {
         <Stars />
         <Globe />
         <Ship label="Containerschiff" model="container" waypoints={ATLANTIC_ROUTE} start={0.35} />
-        <Ship label="Kreuzfahrtschiff" model="cruise" waypoints={CARIBBEAN_ROUTE} start={0.2} size={0.055} />
-        <Ship label="Frachter" model="freighter" waypoints={SOUTH_ATLANTIC_ROUTE} start={0.6} size={0.055} speed={0.003} />
+        <Ship label="Kreuzfahrtschiff" model="cruise" waypoints={PACIFIC_ROUTE} start={0.2} size={0.055} />
+        <Ship label="Frachter" model="freighter" waypoints={INDIAN_ROUTE} start={0.6} size={0.055} speed={0.003} />
         <Balloon label="Ballon Klassik" shape="classic" stripeA="#5b7fe2" stripeB="#e8dfb4" angle={-62} height={-0.45} />
         <Balloon
           label="Ballon Zwiebel"
