@@ -7,9 +7,13 @@ import Paint from "./Paint.jsx";
 import trailVertex from "./shaders/trail.vert?raw";
 import trailFragmentSource from "./shaders/trail.frag?raw";
 import glowFragment from "./shaders/glow.frag?raw";
+import flameVertexSource from "./shaders/flame.vert?raw";
+import flameFragmentSource from "./shaders/flame.frag?raw";
 import noise from "./shaders/noise.glsl?raw";
 
 const trailFragment = trailFragmentSource.replace("#include ./noise.glsl", noise);
+const flameVertex = flameVertexSource.replace("#include ./noise.glsl", noise);
+const flameFragment = flameFragmentSource.replace("#include ./noise.glsl", noise);
 
 // Verbeulter Gesteinsbrocken: Ikosaeder, Ecken zufällig nach innen und aussen verschoben
 function rockGeometry() {
@@ -68,6 +72,7 @@ export default function Meteor() {
   const head = useRef();
   const flash = useRef();
   const headMaterial = useRef();
+  const flame = useRef();
   const flashMaterial = useRef();
   const trail = useRef();
   const state = useRef({ phase: "wait", time: 8, heat: 0, lastSize: 0.01, burnPoint: new THREE.Vector3() });
@@ -84,6 +89,17 @@ export default function Meteor() {
     }),
     []
   );
+  const flameUniforms = useMemo(
+    () => ({
+      uDirection: { value: new THREE.Vector3(0, 0, 1) },
+      uStretch: { value: 1.6 },
+      uTime: { value: 0 },
+      uHeat: { value: 0 },
+      uHot: { value: new THREE.Color("#ffe08a") },
+      uWarm: { value: new THREE.Color("#ef7330") },
+    }),
+    []
+  );
   const headUniforms = useMemo(() => ({ uColor: { value: new THREE.Color("#ffc56b") }, uOpacity: { value: 0 } }), []);
   const flashUniforms = useMemo(() => ({ uColor: { value: new THREE.Color("#fff3d1") }, uOpacity: { value: 0 } }), []);
 
@@ -91,7 +107,9 @@ export default function Meteor() {
     "Meteorit",
     {
       size: { value: 0.035, min: 0.01, max: 0.1, label: "Grösse" },
-      duration: { value: 40, min: 5, max: 120, label: "Flugdauer (s)" },
+      duration: { value: 75, min: 5, max: 180, label: "Flugdauer (s)" },
+      flameSize: { value: 1.6, min: 1, max: 3, label: "Flammenhülle (× Stein)" },
+      flameStretch: { value: 1.8, min: 0, max: 4, label: "Flammen nach hinten" },
       pause: { value: 12, min: 0, max: 60, label: "Pause (s)" },
       glowStart: { value: 2.3, min: 1.4, max: 4, label: "Glüht ab Abstand" },
       burnOut: { value: 1.38, min: 1.05, max: 2, label: "Verglüht bei Abstand" },
@@ -125,6 +143,7 @@ export default function Meteor() {
     if (s.phase === "wait") {
       rock.current.visible = false;
       trail.current.visible = false;
+      flame.current.visible = false;
       headMaterial.current.uniforms.uOpacity.value = 0;
       if (s.time > c.pause) launch(camera);
       return;
@@ -167,9 +186,19 @@ export default function Meteor() {
     s.lastSize = rockSize;
     rock.current.rotation.x += delta * 0.25;
     rock.current.rotation.y += delta * 0.18;
+    // Flammenhülle umschliesst den Stein und wird nach hinten gezogen
+    flame.current.visible = heat > 0.01;
+    flame.current.position.copy(position);
+    flame.current.scale.setScalar(rockSize * c.flameSize);
+    const fu = flame.current.material.uniforms;
+    fu.uDirection.value.copy(direction);
+    fu.uStretch.value = c.flameStretch * heat;
+    fu.uTime.value = clock.elapsedTime;
+    fu.uHeat.value = heat;
+
     head.current.position.copy(position);
     head.current.scale.setScalar(rockSize * (2.2 + 1.6 * heat));
-    headMaterial.current.uniforms.uOpacity.value = 0.8 * heat;
+    headMaterial.current.uniforms.uOpacity.value = 0.45 * heat;
 
     // Schweif als Band hinter dem Kopf, immer zur Kamera gedreht
     trail.current.visible = heat > 0.01;
@@ -195,6 +224,7 @@ export default function Meteor() {
       s.time = 0;
       s.burnPoint.copy(position);
       rock.current.visible = false;
+      flame.current.visible = false;
       headMaterial.current.uniforms.uOpacity.value = 0;
     }
   });
@@ -205,6 +235,16 @@ export default function Meteor() {
     <group>
       <mesh ref={rock} geometry={rockGeo} visible={false}>
         <Paint color="#7a6670" noiseScale={4} />
+      </mesh>
+      <mesh ref={flame} visible={false} renderOrder={2}>
+        <sphereGeometry args={[1, 48, 32]} />
+        <shaderMaterial
+          vertexShader={flameVertex}
+          fragmentShader={flameFragment}
+          uniforms={flameUniforms}
+          transparent
+          depthWrite={false}
+        />
       </mesh>
       <Billboard ref={head}>
         <mesh>
