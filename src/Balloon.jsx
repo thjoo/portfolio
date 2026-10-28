@@ -43,11 +43,15 @@ function balloonProfile(shape, segments = 48) {
 const DOWN = new THREE.Vector3(0, -1, 0);
 const toEarth = new THREE.Vector3();
 
-// Eine Hülle mit eigenem Material; Farben aus den Reglern, Malstil gemeinsam
-function Envelope({ form, stripeA, stripeB, stripes, style, position = [0, 0, 0], tilt = 0 }) {
+// Eine Hülle mit eigenem Material; Farben aus den Reglern, Malstil gemeinsam.
+// profile: eigenes Lathe-Profil (z. B. Zeppelin), sonst aus der Ballonform
+export function Envelope({ form, profile, stripeA, stripeB, stripes, style, position = [0, 0, 0], rotation, tilt = 0 }) {
   const mesh = useRef();
   const scene = useThree((state) => state.scene);
-  const geometry = useMemo(() => new THREE.LatheGeometry(balloonProfile(form), 64), [form]);
+  const geometry = useMemo(
+    () => new THREE.LatheGeometry(profile ?? balloonProfile(form), 64),
+    [form, profile]
+  );
   const uniforms = useMemo(
     () => ({
       uSunDirection: { value: new THREE.Vector3(0, 0, 1) },
@@ -81,7 +85,7 @@ function Envelope({ form, stripeA, stripeB, stripes, style, position = [0, 0, 0]
   });
 
   return (
-    <mesh ref={mesh} geometry={geometry} position={position} rotation={[0, 0, tilt]}>
+    <mesh ref={mesh} geometry={geometry} position={position} rotation={rotation ?? [0, 0, tilt]}>
       <shaderMaterial vertexShader={vertexShader} fragmentShader={fragmentShader} uniforms={uniforms} />
     </mesh>
   );
