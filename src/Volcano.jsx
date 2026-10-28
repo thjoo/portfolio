@@ -53,8 +53,10 @@ function mountainGeometry() {
 
 // Lavaströme: kurze Streifen vom Kraterrand den Hang hinunter (Winkel um die Achse, Länge)
 const LAVA = [
-  [0.4, 0.2],
-  [3.0, 0.15],
+  [0.4, 0.28],
+  [1.7, 0.2],
+  [3.0, 0.24],
+  [4.6, 0.18],
 ].map(([angle, length]) => {
   const r0 = 0.1;
   const r1 = r0 + length;
@@ -70,7 +72,7 @@ const random = new THREE.Vector3();
 
 // Vulkan: raucht ständig ein wenig; in Abständen bricht er aus, mit Aschewolke, Glut und hellem Krater.
 // Hängt an der Erde und dreht mit.
-export default function Volcano({ label = "Vulkan", size = 0.005 }) {
+export default function Volcano({ label = "Vulkan", size = 0.008 }) {
   const frame = useRef();
   const mountain = useRef();
   const glow = useRef();
@@ -101,7 +103,7 @@ export default function Volcano({ label = "Vulkan", size = 0.005 }) {
     label,
     {
       size: { value: size, min: 0.002, max: 0.08, label: "Grösse Berg" },
-      effects: { value: 0.018, min: 0.005, max: 0.15, label: "Grösse Rauch" },
+      effects: { value: 0.024, min: 0.005, max: 0.15, label: "Grösse Rauch" },
       interval: { value: 45, min: 10, max: 180, label: "Ausbruch alle (s)" },
       eruption: { value: 9, min: 2, max: 30, label: "Ausbruch dauert (s)" },
       smoke: { value: 1, min: 0, max: 3, label: "Rauch" },
@@ -150,8 +152,8 @@ export default function Volcano({ label = "Vulkan", size = 0.005 }) {
         .add(random.randomDirection().multiplyScalar(scale * 0.6));
       ash.spawn(crater, velocity, (1.6 + Math.random() * 1.6) * k, 9 + Math.random() * 6);
     });
-    // Glutbrocken fliegen hoch und fallen zurück
-    embers.emit(40 * c.embers * strength, dt, () => {
+    // Glutbrocken fliegen hoch und fallen zurück; ein paar auch ohne Ausbruch
+    embers.emit(c.embers * (4 + 70 * strength), dt, () => {
       velocity
         .copy(site.up)
         .multiplyScalar(scale * (2.5 + Math.random() * 2.5))
@@ -171,8 +173,8 @@ export default function Volcano({ label = "Vulkan", size = 0.005 }) {
     // Krater glüht immer leicht, beim Ausbruch hell
     const flicker = 0.85 + 0.15 * Math.sin(clock.elapsedTime * 7.3) * Math.sin(clock.elapsedTime * 3.1);
     glow.current.position.copy(crater);
-    glow.current.scale.setScalar(scale * (0.6 + 1.6 * strength) * flicker);
-    glowMaterial.current.uniforms.uOpacity.value = (0.3 + 0.9 * strength) * flicker;
+    glow.current.scale.setScalar(scale * (1.0 + 2.0 * strength) * flicker);
+    glowMaterial.current.uniforms.uOpacity.value = (0.55 + 0.6 * strength) * flicker;
   });
 
   return (
@@ -185,7 +187,7 @@ export default function Volcano({ label = "Vulkan", size = 0.005 }) {
         {LAVA.map(({ angle, length, slope, x, y }) => (
           <group key={angle} rotation={[0, angle, 0]}>
             <mesh position={[x, y, 0]} rotation={[0, 0, -slope]}>
-              <boxGeometry args={[length, 0.015, 0.03]} />
+              <boxGeometry args={[length, 0.02, 0.07]} />
               <Paint color="#c9604f" glow="#ffb04a" glowStrength={1} glowAlways />
             </mesh>
           </group>
