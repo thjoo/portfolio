@@ -70,7 +70,7 @@ const random = new THREE.Vector3();
 
 // Vulkan: raucht ständig ein wenig; in Abständen bricht er aus, mit Aschewolke, Glut und hellem Krater.
 // Hängt an der Erde und dreht mit.
-export default function Volcano({ label = "Vulkan", size = 0.013 }) {
+export default function Volcano({ label = "Vulkan", size = 0.005 }) {
   const frame = useRef();
   const mountain = useRef();
   const glow = useRef();
@@ -100,8 +100,8 @@ export default function Volcano({ label = "Vulkan", size = 0.013 }) {
   const c = useControls(
     label,
     {
-      size: { value: size, min: 0.005, max: 0.08, label: "Grösse Berg" },
-      effects: { value: 0.04, min: 0.01, max: 0.15, label: "Grösse Rauch" },
+      size: { value: size, min: 0.002, max: 0.08, label: "Grösse Berg" },
+      effects: { value: 0.018, min: 0.005, max: 0.15, label: "Grösse Rauch" },
       interval: { value: 45, min: 10, max: 180, label: "Ausbruch alle (s)" },
       eruption: { value: 9, min: 2, max: 30, label: "Ausbruch dauert (s)" },
       smoke: { value: 1, min: 0, max: 3, label: "Rauch" },
