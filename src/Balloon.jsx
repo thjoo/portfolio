@@ -2,6 +2,7 @@ import { useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Line } from "@react-three/drei";
 import { useControls } from "leva";
+import { useObjectStyle } from "./objectStyle.js";
 import * as THREE from "three";
 import vertexSource from "./shaders/balloon.vert?raw";
 import fragmentSource from "./shaders/balloon.frag?raw";
@@ -33,25 +34,6 @@ function balloonProfile(shape, segments = 48) {
   points.push(new THREE.Vector2(Math.max(last.x, shape.neck), last.y - 0.05));
   // LatheGeometry erwartet die Punkte von unten nach oben, sonst zeigen die Flächen nach innen
   return points.reverse();
-}
-
-// Gemeinsamer Malstil aller Ballone (ein Satz Regler für alle)
-function useBalloonStyle() {
-  return useControls(
-    "Ballone Stil",
-    {
-      shade: { value: 0.4, min: 0, max: 0.8, label: "Schattierung" },
-      pigment: { value: 0.3, min: 0, max: 0.6, label: "Pigment-Wolken" },
-      edge: { value: 0.55, min: 0, max: 1, label: "Pigmentrand" },
-      bleed: { value: 0.22, min: 0.02, max: 0.5, label: "Streifen verlaufen" },
-      granulation: { value: 0.06, min: 0, max: 0.2, label: "Körnung" },
-      outlineWobble: { value: 0.025, min: 0, max: 0.08, label: "Umriss wackelig" },
-      swingAmount: { value: 7, min: 0, max: 25, label: "Pendeln (°)" },
-      swingSpeed: { value: 1, min: 0.1, max: 3, label: "Pendeln Tempo" },
-      orbitSpeed: { value: 0.01, min: 0, max: 0.2, label: "Umkreisen" },
-    },
-    { collapsed: true }
-  );
 }
 
 const DOWN = new THREE.Vector3(0, -1, 0);
@@ -121,7 +103,7 @@ export default function Balloon({
   const pendulumRef = useRef();
   const form = SHAPES[shape];
 
-  const style = useBalloonStyle();
+  const style = useObjectStyle();
   const c = useControls(
     label,
     {

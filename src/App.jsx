@@ -7,6 +7,16 @@ import { Leva, useControls } from "leva";
 import Globe from "./Globe.jsx";
 import Stars from "./Stars.jsx";
 import Balloon from "./Balloon.jsx";
+import Ship from "./Ship.jsx";
+
+// New York -> Ärmelkanal (über den Nordatlantik)
+const ATLANTIC_ROUTE = [
+  [40.3, -71.0],
+  [41.5, -55.0],
+  [45.0, -35.0],
+  [48.0, -15.0],
+  [49.6, -4.0],
+];
 import Background from "./Background.jsx";
 import { PaperEffect } from "./PaperEffect.js";
 
@@ -104,6 +114,7 @@ export default function App() {
         <Background />
         <Stars />
         <Globe />
+        <Ship label="Containerschiff" waypoints={ATLANTIC_ROUTE} start={0.35} />
         <Balloon label="Ballon Klassik" shape="classic" stripeA="#5b7fe2" stripeB="#e8dfb4" angle={-62} height={-0.45} />
         <Balloon
           label="Ballon Zwiebel"

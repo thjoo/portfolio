@@ -78,7 +78,7 @@ const fragmentShader = /* glsl */ `
       vec3 localRaw = (uGlobeInverse * world).xyz;
       local = normalize(localRaw);
       // Nur Pixel auf der Kugeloberfläche sind Erde; Objekte davor (Ballon …) bekommen kein Eis
-      onGlobe = step(abs(length(localRaw) - 1.0), 0.02);
+      onGlobe = step(abs(length(localRaw) - 1.0), 0.0012);
 
       // Gekritzel im Eis. UV wie bei SphereGeometry: u = atan(z, -x) / 2pi, v = 1 - acos(y) / pi
       vec2 sphereUv = vec2(atan(local.z, -local.x) / 6.28318530718, 1.0 - acos(clamp(local.y, -1.0, 1.0)) / 3.14159265359);
