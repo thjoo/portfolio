@@ -20,24 +20,48 @@ const glowVertex = /* glsl */ `
   }
 `;
 
-// Kegelprofil mit Krater oben (für LatheGeometry, von unten nach oben)
-const PROFILE = [
-  [0.98, 0],
-  [0.8, 0.1],
-  [0.5, 0.33],
-  [0.24, 0.55],
-  [0.19, 0.53],
-  [0.12, 0.47],
-  [0.0, 0.45],
-].map(([x, y]) => new THREE.Vector2(x, y));
-const CRATER = 0.5;
+// Flacher Berg statt Kegel: Höhe fällt weich zum Fuss ab, oben nur eine kleine Mulde
+const HEIGHT = 0.3;
+const mountainHeight = (r) => (HEIGHT * (1 / (1 + Math.pow(r / 0.36, 2.2)) - 0.06 * r));
+const CRATER = mountainHeight(0.08);
 
-// Lavaströme: Streifen den Hang hinunter (Winkel um die Achse, Länge)
+function mountainGeometry() {
+  const points = [];
+  for (let i = 0; i <= 28; i++) {
+    const r = 1 - (i / 28) * (1 - 0.08);
+    points.push(new THREE.Vector2(r, Math.max(mountainHeight(r), 0)));
+  }
+  // Kleine Kratermulde
+  points.push(new THREE.Vector2(0.04, CRATER - 0.025), new THREE.Vector2(0, CRATER - 0.03));
+  const geometry = new THREE.LatheGeometry(points, 48);
+  // Unregelmässig machen: Grate und Täler um den Berg, Flanken verschieden hoch.
+  // Nur ganzzahlige Frequenzen im Winkel, damit die Naht der Lathe-Geometrie geschlossen bleibt
+  const position = geometry.attributes.position;
+  const v = new THREE.Vector3();
+  for (let k = 0; k < position.count; k++) {
+    v.fromBufferAttribute(position, k);
+    const r = Math.hypot(v.x, v.z);
+    const a = Math.atan2(v.z, v.x);
+    const ridges = 0.1 * Math.sin(3 * a + 0.7) + 0.06 * Math.sin(5 * a + 2.1) + 0.04 * Math.sin(8 * a);
+    const radial = 1 + ridges * Math.min(r * 2, 1);
+    const lift = 1 + (0.25 * Math.sin(2 * a + 1.3) + ridges * 0.6) * r;
+    position.setXYZ(k, v.x * radial, v.y * lift, v.z * radial);
+  }
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+// Lavaströme: kurze Streifen vom Kraterrand den Hang hinunter (Winkel um die Achse, Länge)
 const LAVA = [
-  [0.4, 0.42],
-  [2.3, 0.3],
-  [4.1, 0.36],
-];
+  [0.4, 0.2],
+  [3.0, 0.15],
+].map(([angle, length]) => {
+  const r0 = 0.1;
+  const r1 = r0 + length;
+  const slope = Math.atan2(mountainHeight(r0) - mountainHeight(r1), length);
+  const r = (r0 + r1) / 2;
+  return { angle, length, slope, x: r, y: mountainHeight(r) + 0.012 };
+});
 
 const Y = new THREE.Vector3(0, 1, 0);
 const crater = new THREE.Vector3();
@@ -47,14 +71,14 @@ const worldUp = new THREE.Vector3();
 
 // Vulkan: raucht ständig ein wenig; in Abständen bricht er aus, mit Aschewolke, Glut und hellem Krater.
 // Hängt an der Erde und dreht mit.
-export default function Volcano({ label = "Vulkan", size = 0.06 }) {
+export default function Volcano({ label = "Vulkan", size = 0.045 }) {
   const frame = useRef();
   const mountain = useRef();
   const glow = useRef();
   const glowMaterial = useRef();
   const scene = useThree((state) => state.scene);
   const style = useObjectStyle();
-  const geometry = useMemo(() => new THREE.LatheGeometry(PROFILE, 40), []);
+  const geometry = useMemo(() => mountainGeometry(), []);
   const site = useMemo(() => {
     const up = latLonToVector(...SITE);
     return { up, quaternion: new THREE.Quaternion().setFromUnitVectors(Y, up) };
@@ -143,7 +167,7 @@ export default function Volcano({ label = "Vulkan", size = 0.06 }) {
     const night = 1 - THREE.MathUtils.smoothstep(worldUp.dot(sun), -0.15, 0.2);
     const flicker = 0.85 + 0.15 * Math.sin(clock.elapsedTime * 7.3) * Math.sin(clock.elapsedTime * 3.1);
     glow.current.position.copy(crater);
-    glow.current.scale.setScalar(scale * (1.2 + 2.2 * strength) * flicker);
+    glow.current.scale.setScalar(scale * (0.6 + 1.6 * strength) * flicker);
     glowMaterial.current.uniforms.uOpacity.value = (0.25 * night + 0.9 * strength) * flicker;
   });
 
@@ -151,15 +175,14 @@ export default function Volcano({ label = "Vulkan", size = 0.06 }) {
     <group ref={frame} matrixAutoUpdate={false}>
       <group ref={mountain} position={site.up.clone()} quaternion={site.quaternion}>
         <mesh geometry={geometry}>
-          <Paint color="#8a7298" noiseScale={5} />
+          <Paint color="#9a8bb4" noiseScale={5} />
         </mesh>
         {/* Lavaströme leuchten nachts */}
-        {LAVA.map(([angle, length]) => (
+        {LAVA.map(({ angle, length, slope, x, y }) => (
           <group key={angle} rotation={[0, angle, 0]}>
-            {/* Vom Kraterrand den Hang hinunter, knapp über der Oberfläche */}
-            <mesh position={[0.25 + 0.39 * length, 0.56 - 0.313 * length, 0]} rotation={[0, 0, -0.677]}>
-              <boxGeometry args={[length, 0.03, 0.05]} />
-              <Paint color="#d9614c" glow="#ffb04a" glowStrength={1} />
+            <mesh position={[x, y, 0]} rotation={[0, 0, -slope]}>
+              <boxGeometry args={[length, 0.015, 0.03]} />
+              <Paint color="#c9604f" glow="#ffb04a" glowStrength={1} />
             </mesh>
           </group>
         ))}
