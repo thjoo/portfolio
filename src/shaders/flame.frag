@@ -22,7 +22,8 @@ void main() {
 
   vec3 color = mix(uHot, uWarm, smoothstep(0.1, 0.8, vBack));
   // Deckend wie Farbe; nach hinten und am Rand züngelnd lichter
-  float alpha = (0.6 + 0.4 * rim) * tongues * uHeat * (1.0 - vBack * 0.45) * 0.9;
+  // Hinten weich ausblenden: dort übernimmt der Schweif, ohne sichtbare Naht
+  float alpha = (0.6 + 0.4 * rim) * tongues * uHeat * (1.0 - smoothstep(0.25, 0.95, vBack)) * 0.9;
   color = mix(color, vec3(1.0, 0.96, 0.82), (1.0 - rim) * (1.0 - vBack) * 0.5);
   if (alpha < 0.01) discard;
   gl_FragColor = vec4(color, alpha);

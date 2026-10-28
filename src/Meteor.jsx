@@ -129,8 +129,9 @@ export default function Meteor() {
     () => ({
       uTime: { value: 0 },
       uOpacity: { value: 0 },
-      uHot: { value: new THREE.Color("#fff1b8") },
-      uWarm: { value: new THREE.Color("#f2994a") },
+      // Vorne dieselben Farben wie die Flammenhülle, hinten violett
+      uHot: { value: new THREE.Color("#ffe08a") },
+      uWarm: { value: new THREE.Color("#ef7330") },
       uCool: { value: new THREE.Color("#b867c8") },
     }),
     []
@@ -161,7 +162,7 @@ export default function Meteor() {
       flameSize: { value: 1.6, min: 1, max: 3, label: "Flammenhülle (× Stein)" },
       flameStretch: { value: 1.8, min: 0, max: 4, label: "Flammen nach hinten" },
       trailLength: { value: 0.6, min: 0.1, max: 1.5, label: "Schweif-Länge" },
-      trailWidth: { value: 1.3, min: 0.3, max: 4, label: "Schweif-Breite (× Stein)" },
+      trailWidth: { value: 1, min: 0.3, max: 2, label: "Schweif-Breite (× Flamme)" },
       sparks: { value: 1, min: 0, max: 3, label: "Funken" },
       afterglow: { value: 5, min: 0.5, max: 15, label: "Nachleuchten (s)" },
     },
@@ -279,12 +280,13 @@ export default function Meteor() {
     toCamera.copy(camera.position).sub(position).normalize();
     side.crossVectors(direction, toCamera).normalize();
     const positions = trail.current.geometry.attributes.position;
-    const width = c.size * (0.35 + 0.65 * Math.pow(remaining, 0.5));
+    // Schweif beginnt in der Steinmitte, so breit wie die Flammenhülle
+    const flameRadius = Math.max(rockSize, 1e-4) * c.flameSize;
+    const length = c.trailLength * heat + flameRadius;
     for (let i = 0; i < TRAIL_POINTS; i++) {
       const f = i / (TRAIL_POINTS - 1);
-      // Beginnt etwas vor der Steinmitte (im Schein), damit vorne keine Kante sichtbar ist
-      const back = -width * 0.8 + f * (c.trailLength * heat + width * 0.8);
-      const halfWidth = width * c.trailWidth * (1 - f * 0.6) * (0.4 + 0.6 * heat);
+      const back = f * length;
+      const halfWidth = flameRadius * c.trailWidth * (1 - f * 0.6) * (0.4 + 0.6 * heat);
       for (let k = 0; k < 2; k++) {
         corner.copy(position).addScaledVector(direction, -back).addScaledVector(side, k === 0 ? -halfWidth : halfWidth);
         positions.setXYZ(i * 2 + k, corner.x, corner.y, corner.z);
