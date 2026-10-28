@@ -70,7 +70,7 @@ export default function Meteor() {
   const headMaterial = useRef();
   const flashMaterial = useRef();
   const trail = useRef();
-  const state = useRef({ phase: "wait", time: 4, burnPoint: new THREE.Vector3() });
+  const state = useRef({ phase: "wait", time: 8, heat: 0, burnPoint: new THREE.Vector3() });
 
   const rockGeo = useMemo(() => rockGeometry(), []);
   const trailGeo = useMemo(() => trailGeometry(), []);
@@ -91,8 +91,10 @@ export default function Meteor() {
     "Meteorit",
     {
       size: { value: 0.035, min: 0.01, max: 0.1, label: "Grösse" },
-      duration: { value: 5, min: 1.5, max: 15, label: "Flugdauer (s)" },
-      pause: { value: 6, min: 0, max: 30, label: "Pause (s)" },
+      duration: { value: 40, min: 5, max: 120, label: "Flugdauer (s)" },
+      pause: { value: 12, min: 0, max: 60, label: "Pause (s)" },
+      glowStart: { value: 2.3, min: 1.4, max: 4, label: "Glüht ab Abstand" },
+      burnOut: { value: 1.38, min: 1.05, max: 2, label: "Verglüht bei Abstand" },
       trailLength: { value: 0.6, min: 0.1, max: 1.5, label: "Schweif-Länge" },
       trailWidth: { value: 0.05, min: 0.01, max: 0.15, label: "Schweif-Breite" },
     },
@@ -108,7 +110,7 @@ export default function Meteor() {
       .add(new THREE.Vector3().randomDirection().multiplyScalar(0.7))
       .normalize();
     tangent.copy(new THREE.Vector3().randomDirection()).cross(target).normalize();
-    start.copy(target).multiplyScalar(1.0).addScaledVector(tangent, 1.6).addScaledVector(toCamera, 0.6).setLength(4.2);
+    start.copy(target).multiplyScalar(1.0).addScaledVector(tangent, 2.2).addScaledVector(toCamera, 0.2).setLength(5.0);
     s.start = start.clone();
     s.target = target.clone();
     s.phase = "fly";
@@ -130,11 +132,12 @@ export default function Meteor() {
 
     if (s.phase === "burn") {
       // Aufblitzen und verglühen
-      const f = s.time / 0.9;
+      // Langsames, weiches Aufblitzen
+      const f = s.time / 3.5;
       flash.current.position.copy(s.burnPoint);
-      flash.current.scale.setScalar(c.size * (3 + f * 6));
-      flashMaterial.current.uniforms.uOpacity.value = Math.max(0, 1 - f) * 0.9;
-      trail.current.material.uniforms.uOpacity.value = Math.max(0, 0.9 - f * 1.5);
+      flash.current.scale.setScalar(c.size * (3 + f * 5));
+      flashMaterial.current.uniforms.uOpacity.value = Math.sin(Math.min(f, 1) * Math.PI) * 0.7;
+      trail.current.material.uniforms.uOpacity.value = Math.max(0, 0.9 - f * 1.2) * s.heat;
       if (f >= 1) {
         s.phase = "wait";
         s.time = 0;
@@ -145,29 +148,36 @@ export default function Meteor() {
 
     // Flug: langsam beschleunigend auf das Ziel zu
     const t = Math.min(s.time / c.duration, 1);
-    const eased = t * t * (1.6 - 0.6 * t);
+    // Fast gleichmässig, nur leicht schneller werdend
+    const eased = t * (0.8 + 0.2 * t);
     position.lerpVectors(s.start, s.target, eased);
     direction.copy(s.target).sub(s.start).normalize();
 
+    // Draussen kalt; erst beim Eintritt glüht er auf und wird beim Verglühen kleiner
+    const distance = position.length();
+    const heat = 1 - THREE.MathUtils.smoothstep(distance, c.burnOut + 0.1, c.glowStart);
+    const ablation = THREE.MathUtils.smoothstep(distance, c.burnOut, c.burnOut + 0.35);
+    s.heat = heat;
+
     rock.current.visible = true;
     rock.current.position.copy(position);
-    rock.current.scale.setScalar(c.size);
-    rock.current.rotation.x += delta * 1.3;
-    rock.current.rotation.y += delta * 0.9;
+    rock.current.scale.setScalar(c.size * (0.35 + 0.65 * ablation));
+    rock.current.rotation.x += delta * 0.25;
+    rock.current.rotation.y += delta * 0.18;
     head.current.position.copy(position);
-    head.current.scale.setScalar(c.size * 4);
-    headMaterial.current.uniforms.uOpacity.value = 0.55 + 0.25 * Math.min(t * 3, 1);
+    head.current.scale.setScalar(c.size * (2 + 3 * heat));
+    headMaterial.current.uniforms.uOpacity.value = 0.8 * heat;
 
     // Schweif als Band hinter dem Kopf, immer zur Kamera gedreht
-    trail.current.visible = true;
-    trail.current.material.uniforms.uOpacity.value = 0.9;
+    trail.current.visible = heat > 0.01;
+    trail.current.material.uniforms.uOpacity.value = 0.9 * heat;
     toCamera.copy(camera.position).sub(position).normalize();
     side.crossVectors(direction, toCamera).normalize();
     const positions = trail.current.geometry.attributes.position;
     for (let i = 0; i < TRAIL_POINTS; i++) {
       const f = i / (TRAIL_POINTS - 1);
-      const back = f * c.trailLength * Math.min(t * 4, 1);
-      const halfWidth = c.trailWidth * (1 - f * 0.6) * (0.6 + 0.4 * Math.min(t * 3, 1));
+      const back = f * c.trailLength * heat;
+      const halfWidth = c.trailWidth * (1 - f * 0.6) * (0.4 + 0.6 * heat);
       for (let k = 0; k < 2; k++) {
         corner.copy(position).addScaledVector(direction, -back).addScaledVector(side, k === 0 ? -halfWidth : halfWidth);
         positions.setXYZ(i * 2 + k, corner.x, corner.y, corner.z);
@@ -176,7 +186,7 @@ export default function Meteor() {
     positions.needsUpdate = true;
 
     // Kurz vor der Oberfläche verglüht er
-    if (position.length() < 1.05 || t >= 1) {
+    if (distance < c.burnOut || t >= 1) {
       s.phase = "burn";
       s.time = 0;
       s.burnPoint.copy(position);
