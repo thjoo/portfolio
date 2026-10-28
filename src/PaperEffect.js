@@ -82,7 +82,7 @@ const fragmentShader = /* glsl */ `
       // Eis = gekritzeltes Knäuel über jedem Pol. Grösse je nach Jahreszeit (0 Sommer, 1 Winter)
       float pole = local.y > 0.0 ? 1.0 : -1.0;
       float radiusDeg = pole > 0.0 ? mix(13.0, 30.0, uIceNorth) : mix(24.0, 35.0, uIceSouth);
-      float pressure = scribbleBall(local, pole, radiusDeg, 34.0 * uScribbleDensity, uScribbleWidth, uIceIrregular);
+      float pressure = scribbleBall(local, pole, radiusDeg, 42.0 * uScribbleDensity, uScribbleWidth, uIceIrregular);
       if (pressure > 0.0) {
         float sun = dot(normalize(world.xyz), normalize(uSunDirection));
         float light = 0.85 + 0.25 * smoothstep(-0.2, 0.2, sun);

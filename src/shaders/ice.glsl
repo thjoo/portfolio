@@ -19,16 +19,19 @@ float scribbleBall(vec3 p, float pole, float radiusDeg, float loops, float width
   float inside = step(0.0, h) * step(length(q), radius * 1.6);
   if (inside < 0.5) return 0.0;
 
-  float pressure = 0.0;
+  // Kreideschichten: jeder Strich legt Pigment dazu (1 - Produkt der Lücken)
+  float uncovered = 1.0;
   float seed = pole > 0.0 ? 11.0 : 47.0;
-  for (int i = 0; i < 64; i++) {
+  for (int i = 0; i < 96; i++) {
     float fi = float(i);
     if (fi >= loops) break;
     float k = seed + fi * 7.13;
-    // Mittelpunkt etwas versetzt, Grösse und Form variieren
-    vec2 center = (vec2(scribbleHash(k), scribbleHash(k + 1.3)) - 0.5) * radius * 0.7 * messiness;
-    // Mehr kleine Schlaufen: die Mitte überlagert sich stärker
-    float a = radius * (0.2 + 0.8 * pow(scribbleHash(k + 2.1), 0.7));
+    // Mittelpunkte häufen sich nahe am Pol -> die Mitte wird durch Überlagerung dicht
+    float spreadRadius = pow(scribbleHash(k), 1.6) * radius * 0.6 * messiness;
+    float spreadAngle = scribbleHash(k + 1.3) * 6.28318;
+    vec2 center = vec2(cos(spreadAngle), sin(spreadAngle)) * spreadRadius;
+    // Viele kleine und mittlere, wenige grosse Schlaufen
+    float a = radius * (0.12 + 0.88 * pow(scribbleHash(k + 2.1), 1.2));
     float b = a * (0.55 + 0.45 * scribbleHash(k + 3.7));
     float angle = scribbleHash(k + 4.9) * 3.14159;
     float c = cos(angle);
@@ -42,25 +45,19 @@ float scribbleBall(vec3 p, float pole, float radiusDeg, float loops, float width
     // Abstand zur Schlaufe in Pixeln (Gradient der Ellipse ~ 1 / mittlerer Radius)
     float dPx = abs(f) * (a + b) * 0.5 / pixel;
     float halfWidth = widthPx * (0.75 + 0.5 * scribbleHash(k + 6.1));
-    // Dicker Farbstift: breites, weich abfallendes Druckprofil wie am Rand der Füllung.
+    // Dicker Farbstift: breites, weich abfallendes Druckprofil.
     // Im Abfall entscheidet das Papierkorn, wo Pigment haftet -> ausgefranste Ränder.
-    float stroke = 1.0 - smoothstep(0.0, halfWidth * 2.4, dPx);
+    float stroke = 1.0 - smoothstep(0.0, halfWidth * 1.7, dPx);
     // Druck schwankt entlang des Strichs: stellenweise trocken und lückig
-    stroke *= 0.78 + 0.32 * snoise(p * 22.0 + k);
+    stroke *= 0.8 + 0.3 * sin(t * 3.0 + k) * sin(t * 7.3 + k * 2.3);
     // Manche Schlaufen sind nur Bögen (Stift abgesetzt)
     float arcStart = scribbleHash(k + 8.3) * 6.28318;
     float arcLength = 3.5 + scribbleHash(k + 9.1) * 3.5;
     float along = mod(t + 3.14159 - arcStart, 6.28318);
     stroke *= 1.0 - smoothstep(arcLength - 0.3, arcLength, along);
-    // Übermalen verstärkt: überlagerte Striche drücken mehr Pigment aufs Papier
-    pressure = max(pressure, stroke) + stroke * 0.12;
+    uncovered *= 1.0 - stroke * 0.62;
   }
-  // In der Mitte stärker geschlossen: flächiger Druck, der zur Mitte hin zunimmt
-  // Plateau in der Mitte, fällt erst nach aussen ab; leicht unregelmässig wie von Hand gefüllt
-  float fillEdge = radius * (0.75 + 0.12 * snoise(p * 6.0));
-  float centerFill = 1.0 - smoothstep(radius * 0.3, fillEdge, length(q));
-  pressure = max(pressure, centerFill * 0.9);
-  return clamp(pressure, 0.0, 1.2);
+  return 1.0 - uncovered;
 }
 
 // Papierzahn für Wachskreide: organische Körnung auf der Kugel, ohne Raster.
@@ -72,5 +69,5 @@ float crayonTooth(vec3 p, float scale) {
 
 // Wachskreide haftet nur auf den Papierspitzen; mit mehr Druck schliesst sich die Fläche.
 float crayonDeposit(float pressure, float tooth) {
-  return smoothstep(0.35, 0.7, pressure + tooth * 0.4);
+  return smoothstep(0.18, 0.9, pressure + tooth * 0.4);
 }
