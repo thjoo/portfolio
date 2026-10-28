@@ -8,6 +8,7 @@ import Globe from "./Globe.jsx";
 import Stars from "./Stars.jsx";
 import Balloon from "./Balloon.jsx";
 import Ship from "./Ship.jsx";
+import Meteor from "./Meteor.jsx";
 
 // New York -> Ärmelkanal (über den Nordatlantik)
 const ATLANTIC_ROUTE = [
@@ -147,6 +148,7 @@ export default function App() {
         <Background />
         <Stars />
         <Globe />
+        <Meteor />
         <Ship label="Containerschiff" model="container" waypoints={ATLANTIC_ROUTE} start={0.35} />
         <Ship label="Kreuzfahrtschiff" model="cruise" waypoints={PACIFIC_ROUTE} start={0.2} size={0.055} />
         <Ship label="Frachter" model="freighter" waypoints={INDIAN_ROUTE} start={0.6} size={0.055} speed={0.003} />
