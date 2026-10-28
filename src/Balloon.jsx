@@ -167,7 +167,7 @@ export default function Balloon({
       0,
       Math.sin(w * 0.9 + 1.1) * amplitude
     );
-    body.current.scale.setScalar(c.size);
+    body.current.scale.setScalar(c.size * style.scale);
   });
 
   return (

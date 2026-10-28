@@ -109,7 +109,7 @@ export default function Zeppelin({ label = "Zeppelin", size = 0.1 }) {
     body.current.quaternion.setFromRotationMatrix(basis);
     // Leichtes Nicken wie in Böen
     body.current.rotateZ(Math.sin(t * 0.45) * 0.03);
-    body.current.scale.setScalar(c.size);
+    body.current.scale.setScalar(c.size * style.scale);
 
     propellerLeft.current.rotation.x += delta * 14;
     propellerRight.current.rotation.x -= delta * 14;

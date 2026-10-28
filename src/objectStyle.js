@@ -5,6 +5,7 @@ export function useObjectStyle() {
   return useControls(
     "Objekte Stil",
     {
+      scale: { value: 0.7, min: 0.3, max: 1.5, label: "Grösse alle" },
       shade: { value: 0.4, min: 0, max: 0.8, label: "Schattierung" },
       pigment: { value: 0.3, min: 0, max: 0.6, label: "Pigment-Wolken" },
       edge: { value: 0.55, min: 0, max: 1, label: "Pigmentrand" },

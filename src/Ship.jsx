@@ -4,6 +4,7 @@ import { useControls } from "leva";
 import * as THREE from "three";
 import Paint from "./Paint.jsx";
 import ShipLight from "./ShipLight.jsx";
+import { useObjectStyle } from "./objectStyle.js";
 import { createRoute, findLandOnRoute } from "./route.js";
 import wakeVertex from "./shaders/wake.vert?raw";
 import wakeFragmentSource from "./shaders/wake.frag?raw";
@@ -408,6 +409,7 @@ export default function Ship({ label = "Containerschiff", model = "container", w
   const route = useMemo(() => createRoute(waypoints), [waypoints]);
   const progress = useRef({ t: start, direction: 1 });
   const checked = useRef(false);
+  const style = useObjectStyle();
 
   const c = useControls(
     label,
@@ -466,21 +468,23 @@ export default function Ship({ label = "Containerschiff", model = "container", w
 
     ship.current.position.copy(up).multiplyScalar(1.0015);
     ship.current.quaternion.setFromRotationMatrix(basis);
-    ship.current.scale.setScalar(c.size);
+    // Grösse des Schiffs mal gemeinsamer Faktor aller Objekte
+    const size = c.size * style.scale;
+    ship.current.scale.setScalar(size);
 
     // Kielwasser: Schaumbänder hinter dem Heck, auf der Meeresoberfläche
-    const length = c.size * 2.4 * c.wake;
+    const length = size * 2.4 * c.wake;
     const positions = wake.current.geometry.attributes.position;
     WAKE_ARMS.forEach((arm, a) => {
       for (let i = 0; i < WAKE_POINTS; i++) {
         const f = i / (WAKE_POINTS - 1);
-        const distance = c.size * 0.95 + f * length * arm.length;
+        const distance = size * 0.95 + f * length * arm.length;
         // Mittellinie des Bandes, läuft schräg nach aussen
         point
           .copy(up)
           .addScaledVector(forward, -distance)
           .addScaledVector(side, arm.spread * f * length * arm.length);
-        const halfWidth = c.size * THREE.MathUtils.lerp(arm.width[0], arm.width[1], f);
+        const halfWidth = size * THREE.MathUtils.lerp(arm.width[0], arm.width[1], f);
         for (let k = 0; k < 2; k++) {
           corner.copy(point).addScaledVector(side, k === 0 ? -halfWidth : halfWidth).normalize().multiplyScalar(1.0008);
           positions.setXYZ((a * WAKE_POINTS + i) * 2 + k, corner.x, corner.y, corner.z);
