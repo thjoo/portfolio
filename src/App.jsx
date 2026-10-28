@@ -11,6 +11,7 @@ import Ship from "./Ship.jsx";
 import Meteor from "./Meteor.jsx";
 import Zeppelin from "./Zeppelin.jsx";
 import Satellite from "./Satellite.jsx";
+import Rocket from "./Rocket.jsx";
 
 // New York -> Ärmelkanal (über den Nordatlantik)
 const ATLANTIC_ROUTE = [
@@ -196,6 +197,7 @@ export default function App() {
         />
         <Zeppelin />
         <Satellite />
+        <Rocket />
         <OrbitControls enablePan={false} minDistance={2} maxDistance={14} />
         <FitCamera />
         <Post />
