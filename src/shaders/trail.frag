@@ -14,7 +14,8 @@ void main() {
   float across = abs(vUv.y - 0.5) * 2.0;
 
   // Schweif wird nach hinten schmaler, Ränder flackern
-  float width = mix(1.0, 0.25, along);
+  // Vorne spitz und weich zulaufend wie eine Flamme, nach hinten schmaler
+  float width = mix(1.0, 0.25, along) * sqrt(smoothstep(0.0, 0.14, along));
   float flicker = snoise(vec3(along * 7.0 - uTime * 3.0, vUv.y * 2.5, 0.0)) * 0.25;
   float band = 1.0 - smoothstep(width * 0.45, width, across + flicker);
 
@@ -28,7 +29,7 @@ void main() {
   // Mitte heller, wie ein ausgesparter Lichtkern
   color = mix(color, vec3(1.0, 0.97, 0.88), (1.0 - smoothstep(0.0, 0.35, across)) * (1.0 - smoothstep(0.0, 0.3, along)) * 0.7);
 
-  float alpha = band * broken * pow(1.0 - along, 1.2) * uOpacity;
+  float alpha = band * broken * pow(1.0 - along, 1.2) * smoothstep(0.0, 0.05, along) * uOpacity;
   if (alpha < 0.01) discard;
   gl_FragColor = vec4(color, alpha);
   #include <colorspace_fragment>

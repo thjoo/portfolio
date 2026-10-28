@@ -70,7 +70,7 @@ export default function Meteor() {
   const headMaterial = useRef();
   const flashMaterial = useRef();
   const trail = useRef();
-  const state = useRef({ phase: "wait", time: 8, heat: 0, burnPoint: new THREE.Vector3() });
+  const state = useRef({ phase: "wait", time: 8, heat: 0, lastSize: 0.01, burnPoint: new THREE.Vector3() });
 
   const rockGeo = useMemo(() => rockGeometry(), []);
   const trailGeo = useMemo(() => trailGeometry(), []);
@@ -96,7 +96,7 @@ export default function Meteor() {
       glowStart: { value: 2.3, min: 1.4, max: 4, label: "Glüht ab Abstand" },
       burnOut: { value: 1.38, min: 1.05, max: 2, label: "Verglüht bei Abstand" },
       trailLength: { value: 0.6, min: 0.1, max: 1.5, label: "Schweif-Länge" },
-      trailWidth: { value: 0.05, min: 0.01, max: 0.15, label: "Schweif-Breite" },
+      trailWidth: { value: 1.3, min: 0.3, max: 4, label: "Schweif-Breite (× Stein)" },
     },
     { collapsed: true }
   );
@@ -135,7 +135,7 @@ export default function Meteor() {
       // Langsames, weiches Aufblitzen
       const f = s.time / 3.5;
       flash.current.position.copy(s.burnPoint);
-      flash.current.scale.setScalar(c.size * (3 + f * 5));
+      flash.current.scale.setScalar(s.lastSize * (2.5 + f * 3));
       flashMaterial.current.uniforms.uOpacity.value = Math.sin(Math.min(f, 1) * Math.PI) * 0.7;
       trail.current.material.uniforms.uOpacity.value = Math.max(0, 0.9 - f * 1.2) * s.heat;
       if (f >= 1) {
@@ -161,11 +161,14 @@ export default function Meteor() {
 
     rock.current.visible = true;
     rock.current.position.copy(position);
-    rock.current.scale.setScalar(c.size * (0.35 + 0.65 * ablation));
+    // Aktuelle Grösse des Steins: Schein und Schweif richten sich danach und schrumpfen mit
+    const rockSize = c.size * (0.35 + 0.65 * ablation);
+    rock.current.scale.setScalar(rockSize);
+    s.lastSize = rockSize;
     rock.current.rotation.x += delta * 0.25;
     rock.current.rotation.y += delta * 0.18;
     head.current.position.copy(position);
-    head.current.scale.setScalar(c.size * (2 + 3 * heat));
+    head.current.scale.setScalar(rockSize * (2.2 + 1.6 * heat));
     headMaterial.current.uniforms.uOpacity.value = 0.8 * heat;
 
     // Schweif als Band hinter dem Kopf, immer zur Kamera gedreht
@@ -176,8 +179,9 @@ export default function Meteor() {
     const positions = trail.current.geometry.attributes.position;
     for (let i = 0; i < TRAIL_POINTS; i++) {
       const f = i / (TRAIL_POINTS - 1);
-      const back = f * c.trailLength * heat;
-      const halfWidth = c.trailWidth * (1 - f * 0.6) * (0.4 + 0.6 * heat);
+      // Beginnt etwas vor der Steinmitte (im Schein), damit vorne keine Kante sichtbar ist
+      const back = -rockSize * 0.8 + f * (c.trailLength * heat + rockSize * 0.8);
+      const halfWidth = rockSize * c.trailWidth * (1 - f * 0.6) * (0.4 + 0.6 * heat);
       for (let k = 0; k < 2; k++) {
         corner.copy(position).addScaledVector(direction, -back).addScaledVector(side, k === 0 ? -halfWidth : halfWidth);
         positions.setXYZ(i * 2 + k, corner.x, corner.y, corner.z);
