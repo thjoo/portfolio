@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Londrina+Solid:wght@400;900&family=Londrina+Shadow&family=Rubik+Dirt&family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Syne:wght@700&family=Unbounded:wght@600&family=Rozha+One&family=Young+Serif&family=Calistoga&family=Gloock&family=Shrikhand&family=Righteous&family=Darumadrop+One&family=Rammetto+One&family=Covered+By+Your+Grace&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Jost:wght@500;700;800&family=League+Spartan:wght@500;700;800&family=Covered+By+Your+Grace&display=swap"
       rel="stylesheet"
     />
     <style>
@@ -90,34 +90,30 @@
   <body>
     <header>
       <h1>Titelschriften zur Handschrift</h1>
-      Der Titel liegt hinter der Erde, der Text in Handschrift unten links. Zweite Auswahl: von Hand geschnittene,
-      weiche Serifen, eigenwillige Grotesk und Retro-Schriften.
+      Der Titel liegt hinter der Erde, der Text in Handschrift unten links. Futura und freie Futura-ähnliche Schriften in
+      verschiedenen Stärken.
     </header>
     <main class="grid" id="grid"></main>
     <script>
+      // Futura ist auf dem Mac installiert (lokal sichtbar); fürs Web bräuchte sie eine Lizenz.
+      // Jost und League Spartan sind freie, Futura-ähnliche Schriften (Google Fonts)
       const fonts = [
-        ["Londrina Solid", "von Hand ausgeschnitten, schmal, verspielt", "400"],
-        ["Londrina Shadow", "dieselbe mit Schattenlinie, wie gezeichnet", "400"],
-        ["Rubik Dirt", "kräftig mit Druckspuren, passt zum Papier", "400"],
-        ["Bricolage Grotesque", "eigenwillige Grotesk, modern", "700"],
-        ["Syne", "breit und kantig, sehr eigen", "700"],
-        ["Unbounded", "breit und rund, freundlich", "600"],
-        ["Rozha One", "kräftige Serife mit starken Kontrasten", "400"],
-        ["Young Serif", "weiche Serife, warm", "400"],
-        ["Calistoga", "runde Serife, bilderbuchnah", "400"],
-        ["Gloock", "starke Kontraste, buchartig", "400"],
-        ["Shrikhand", "schwungvoll, Retro-Plakat", "400"],
-        ["Righteous", "rund, Retro", "400"],
-        ["Darumadrop One", "weich und tropfig, verspielt", "400"],
-        ["Rammetto One", "rund und schwer, fröhlich", "400"],
+        ["Futura", "Original (Mac), Medium", "500"],
+        ["Futura", "Original (Mac), Bold", "700"],
+        ["Futura", "Original (Mac), Condensed ExtraBold", "800", "condensed"],
+        ["Jost", "frei, sehr nah an Futura, Medium", "500"],
+        ["Jost", "frei, Bold", "700"],
+        ["Jost", "frei, ExtraBold", "800"],
+        ["League Spartan", "frei, Futura-ähnlich, etwas kräftiger, Medium", "500"],
+        ["League Spartan", "frei, Bold", "700"],
       ];
       const grid = document.getElementById("grid");
-      fonts.forEach(([name, note, weight], i) => {
+      fonts.forEach(([name, note, weight, stretch], i) => {
         const el = document.createElement("div");
         el.className = "stage";
         el.innerHTML = `
           <span class="label">${i + 1}. ${name} – ${note}</span>
-          <h2 class="title" style="font-family: '${name}', sans-serif; font-weight: ${weight}">3. Klasse</h2>
+          <h2 class="title" style="font-family: '${name}', sans-serif; font-weight: ${weight}; font-stretch: ${stretch || "normal"}; ${stretch ? "font-family: 'Futura Condensed ExtraBold', Futura, sans-serif;" : ""}">3. Klasse</h2>
           <div class="earth"></div>
           <p class="text">Themen und Skripte: Höhenstufen, Flüsse und Gewässer, Klimazonen.</p>`;
         grid.appendChild(el);
