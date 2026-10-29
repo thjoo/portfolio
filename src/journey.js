@@ -8,7 +8,8 @@ import * as THREE from "three";
 // in echt): jedes Stadium liegt mindestens 35° weiter westlich als das vorige, notfalls eine Runde mehr; zoom: Abstand im Verhältnis zur ganzen Erde (1 = passt
 // ganz ins Bild); shift: Erde seitlich verschieben, damit links Platz für den Text bleibt (Anteil Breite);
 // palette: Farben der Erde und des Hintergrunds (null = Grundfarben aus den Reglern);
-// ice: [Arktis, Antarktis] 0 Sommer … 1 Winter; sun: [Winkel (°), Höhe] der Sonne;
+// ice: [Arktis, Antarktis] 0 Sommer … 1 Winter; sun: [Winkel (°), Höhe] der Sonne (Winkel nahe -80:
+// Sonne fast von links, die Tag-Nacht-Grenze läuft dann sichtbar durch die nach rechts gerückte Erde);
 // focus: Objekte, die hervorgehoben sind; others: Grösse aller übrigen (0 = ausgeblendet)
 
 const SPRING = {
@@ -84,7 +85,7 @@ export const STAGES = [
     shift: 0.2,
     palette: null,
     ice: [0, 1],
-    sun: [-72, 0.25],
+    sun: [-78, 0.25],
     focus: ["balloonClassic", "balloonOnion", "shipContainer", "clouds"],
     others: 0,
   },
@@ -95,7 +96,7 @@ export const STAGES = [
     shift: 0.27,
     palette: SPRING,
     ice: [0.45, 0.55],
-    sun: [-55, 0.05],
+    sun: [-87, 0.05],
     focus: ["rocket", "clouds", "planeZurich"],
     others: 0.7,
   },
@@ -106,7 +107,7 @@ export const STAGES = [
     shift: 0.29,
     palette: SUMMER,
     ice: [0, 1],
-    sun: [-45, 0.45],
+    sun: [-88, 0.3],
     focus: ["volcano", "clouds", "planeLondon"],
     others: 0.7,
   },
@@ -117,7 +118,7 @@ export const STAGES = [
     shift: 0.2,
     palette: AUTUMN,
     ice: [0.55, 0.45],
-    sun: [-70, 0.05],
+    sun: [-82, 0.05],
     focus: ["balloonClassic", "balloonOnion", "weatherBalloon", "zeppelin", "clouds"],
     others: 0.7,
   },
@@ -128,7 +129,7 @@ export const STAGES = [
     shift: 0.27,
     palette: WINTER,
     ice: [1, 0.15],
-    sun: [-60, -0.35],
+    sun: [-86, -0.25],
     focus: ["shipResearch", "meteor", "satellite"],
     others: 0.7,
   },
@@ -139,7 +140,7 @@ export const STAGES = [
     shift: 0.27,
     palette: null,
     ice: [0, 1],
-    sun: [-72, 0.25],
+    sun: [-74, 0.25],
     focus: ["balloonClassic", "balloonOnion", "clouds", "zeppelin"],
     others: 0.6,
   },
