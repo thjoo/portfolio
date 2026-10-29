@@ -1,9 +1,201 @@
+:root {
+  --ink: #f4f0ff;
+  --ink-soft: rgba(244, 240, 255, 0.72);
+  --panel: rgba(28, 22, 72, 0.42);
+  --panel-border: rgba(244, 240, 255, 0.14);
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-body: "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
 html,
-body,
-#root {
+body {
   margin: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background: #4a38b0;
+  background: #2a2066;
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Die 3D-Bühne steht fest hinter allem */
+.stage {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+/* Abschnitte scrollen über die Bühne; nur die Karten fangen Klicks ab, sonst kann man die Erde ziehen */
+.journey {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.journey-section {
+  min-height: 170vh;
+  box-sizing: border-box;
+  padding: 26vh 6vw 0;
+}
+
+.journey-section.is-first {
+  padding-top: 12vh;
+}
+
+.journey-section.is-last {
+  min-height: 100vh;
+}
+
+.hero {
+  max-width: 34rem;
+  margin-bottom: 38vh;
+}
+
+.hero-kicker {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.hero-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  line-height: 1.05;
+  text-wrap: balance;
+}
+
+.hero-hint {
+  margin: 1.25rem 0 0;
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+}
+
+.card {
+  pointer-events: auto;
+  max-width: 26rem;
+  padding: 1.6rem 1.8rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 1.25rem;
+  background: var(--panel);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.card-kicker {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.card-title {
+  margin: 0 0 0.75rem;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(1.8rem, 3.2vw, 2.6rem);
+  line-height: 1.1;
+}
+
+.card-text {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+/* Jahreszeiten-Leiste rechts */
+.seasons {
+  position: fixed;
+  right: 1.25rem;
+  top: 50%;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transform: translateY(-50%);
+}
+
+.season {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0.35rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.season-symbol {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  font-size: 0.95rem;
+  transition: color 0.3s, border-color 0.3s, transform 0.3s;
+}
+
+.season-label {
+  position: absolute;
+  right: calc(100% + 0.2rem);
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(0.4rem);
+  transition: opacity 0.25s, transform 0.25s;
+}
+
+.season:hover .season-label,
+.season:focus-visible .season-label,
+.season.is-active .season-label {
+  opacity: 1;
+  transform: none;
+}
+
+.season.is-active .season-symbol {
+  color: var(--accent);
+  border-color: var(--accent);
+  transform: scale(1.12);
+}
+
+.season:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Schmal: Text unten, Erde oben (die Kamera schiebt sie hoch) */
+@media (max-width: 760px) {
+  .journey-section {
+    padding: 58vh 16px 0;
+  }
+  .journey-section.is-first {
+    padding-top: 8vh;
+  }
+  .hero {
+    margin-bottom: 40vh;
+  }
+  .card {
+    max-width: none;
+    padding: 1.25rem 1.35rem;
+  }
+  .seasons {
+    right: 8px;
+  }
+  .season-label {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .season-symbol,
+  .season-label {
+    transition: none;
+  }
 }

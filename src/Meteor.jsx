@@ -10,6 +10,7 @@ import glowFragment from "./shaders/glow.frag?raw";
 import flameVertexSource from "./shaders/flame.vert?raw";
 import flameFragmentSource from "./shaders/flame.frag?raw";
 import noise from "./shaders/noise.glsl?raw";
+import { usePresence, useArrival } from "./journey.js";
 
 const trailFragment = trailFragmentSource.replace("#include ./noise.glsl", noise);
 const flameVertex = flameVertexSource.replace("#include ./noise.glsl", noise);
@@ -112,6 +113,9 @@ export default function Meteor() {
   const headMaterial = useRef();
   const trail = useRef();
   const sparks = useRef();
+  // Nur im Winter (Stadium 4) unterwegs; beim Ankommen fällt er sofort
+  const presence = usePresence();
+  const arrived = useArrival(4);
   const state = useRef({
     phase: "wait",
     time: 8,
@@ -223,7 +227,7 @@ export default function Meteor() {
       flame.current.visible = false;
       trail.current.visible = false;
       headMaterial.current.uniforms.uOpacity.value = 0;
-      if (s.time > c.pause) launch(camera);
+      if (arrived() || (presence() > 0.5 && s.time > c.pause)) launch(camera);
       return;
     }
 

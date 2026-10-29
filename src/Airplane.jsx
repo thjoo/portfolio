@@ -3,6 +3,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useControls } from "leva";
 import * as THREE from "three";
 import { useObjectStyle } from "./objectStyle.js";
+import { usePresence } from "./journey.js";
 import Paint from "./Paint.jsx";
 import ShipLight from "./ShipLight.jsx";
 import { createRoute } from "./route.js";
@@ -133,6 +134,8 @@ export default function Airplane({ label, from, to, livery = "#d9614c", duration
   const trail = useRef();
   const scene = useThree((state) => state.scene);
   const style = useObjectStyle();
+  // Sichtbarkeit und Grösse je Stadium der Reise
+  const presence = usePresence();
   const route = useMemo(() => createRoute([from, to]), [from, to]);
   const progress = useRef(start);
   const trailGeo = useMemo(() => trailGeometry(), []);
@@ -188,7 +191,9 @@ export default function Airplane({ label, from, to, livery = "#d9614c", duration
     plane.current.quaternion.setFromRotationMatrix(basis);
     // Am Boden klein ein- und ausblenden, damit es nicht plötzlich auftaucht
     const appear = THREE.MathUtils.smoothstep(t, 0, 0.03) * (1 - THREE.MathUtils.smoothstep(t, 0.97, 1));
-    const scale = c.size * style.scale;
+    const weight = presence();
+    frame.current.visible = weight > 0.005;
+    const scale = c.size * style.scale * Math.max(weight, 1e-3);
     plane.current.scale.setScalar(scale * appear);
     plane.current.visible = flying && appear > 0.01;
 

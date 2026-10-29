@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { useControls, folder } from "leva";
 import * as THREE from "three";
 import { createLandTexture } from "./landTexture.js";
+import { blend, blendColor } from "./journey.js";
 import vertexShader from "./shaders/globe.vert?raw";
 import fragmentSource from "./shaders/globe.frag?raw";
 import noise from "./shaders/noise.glsl?raw";
@@ -61,7 +62,6 @@ export default function Globe() {
       highlight: "#8f98ff",
     }),
     Licht: folder({
-      sunAngle: { value: -72, min: -180, max: 180, step: 1, label: "Sonne (°)" },
       terminatorSoftness: { value: 0.22, min: 0.001, max: 0.5, label: "Tag/Nacht weich" },
       terminatorWobble: { value: 0.16, min: 0, max: 0.4, label: "Tag/Nacht gemalt" },
       specular: { value: 0.55, min: 0, max: 1, label: "Glanzfleck" },
@@ -74,8 +74,6 @@ export default function Globe() {
       granulation: { value: 0.09, min: 0, max: 0.25, label: "Körnung" },
     }),
     Details: folder({
-      iceNorth: { value: 0, min: 0, max: 1, label: "Arktis Sommer→Winter" },
-      iceSouth: { value: 1, min: 0, max: 1, label: "Antarktis Sommer→Winter" },
       iceIrregular: { value: 1, min: 0, max: 2, label: "Knäuel unordentlich" },
       iceCoast: { value: 0.35, min: 0, max: 1, label: "Küste im Eis" },
       iceSoftness: { value: 0.14, min: 0.005, max: 0.3, label: "Eis-Übergang weich" },
@@ -86,25 +84,28 @@ export default function Globe() {
       scribbleWidth: { value: 3.2, min: 0.5, max: 8, label: "Strichbreite (px)" },
       iceThickness: { value: 6, min: 0, max: 16, label: "Eis-Dicke (px)" },
       cityDensity: { value: 1, min: 0, max: 1.5, label: "Stadtlichter" },
-      rotationSpeed: { value: 0.015, min: 0, max: 0.3, label: "Rotation" },
     }),
   });
 
-  useFrame((_, delta) => {
+  useFrame(() => {
     // R3F kopiert das uniforms-Objekt beim Erzeugen -> immer die Uniforms des Materials beschreiben
     const u = mesh.current.material.uniforms;
-    u.uOceanDay.value.set(c.oceanDay);
-    u.uOceanNight.value.set(c.oceanNight);
-    u.uLandDay.value.set(c.landDay);
-    u.uLandNight.value.set(c.landNight);
-    u.uIce.value.set(c.ice);
-    u.uSeaIce.value.set(c.seaIce);
+    // Farben je Jahreszeit (Stadium der Reise); im ersten und letzten Stadium die Grundfarben der Regler
+    blendColor(u.uOceanDay.value, "oceanDay", c.oceanDay);
+    blendColor(u.uOceanNight.value, "oceanNight", c.oceanNight);
+    blendColor(u.uLandDay.value, "landDay", c.landDay);
+    blendColor(u.uLandNight.value, "landNight", c.landNight);
+    blendColor(u.uIce.value, "ice", c.ice);
+    blendColor(u.uSeaIce.value, "seaIce", c.seaIce);
+    blendColor(u.uHighlight.value, "highlight", c.highlight);
     u.uCityLights.value.set(c.cityLights);
-    u.uHighlight.value.set(c.highlight);
 
-    // Sonne in Weltkoordinaten, leicht von oben links vorne wie in der Illustration
-    const a = THREE.MathUtils.degToRad(c.sunAngle);
-    u.uSunDirection.value.set(Math.sin(a), 0.25, Math.cos(a)).normalize();
+    // Sonne in Weltkoordinaten und Eis je Jahreszeit: Winkel um die Erde und Höhe (im Sommer steht sie
+    // über dem Norden, im Winter über dem Süden)
+    const [from, to, f] = blend();
+    const angle = THREE.MathUtils.degToRad(THREE.MathUtils.lerp(from.sun[0], to.sun[0], f));
+    const height = THREE.MathUtils.lerp(from.sun[1], to.sun[1], f);
+    u.uSunDirection.value.set(Math.sin(angle), height, Math.cos(angle)).normalize();
 
     u.uTerminatorSoftness.value = c.terminatorSoftness;
     u.uTerminatorWobble.value = c.terminatorWobble;
@@ -112,8 +113,8 @@ export default function Globe() {
     u.uPigment.value = c.pigment;
     u.uEdgeDarkening.value = c.edgeDarkening;
     u.uGranulation.value = c.granulation;
-    u.uIceNorth.value = c.iceNorth;
-    u.uIceSouth.value = c.iceSouth;
+    u.uIceNorth.value = THREE.MathUtils.lerp(from.ice[0], to.ice[0], f);
+    u.uIceSouth.value = THREE.MathUtils.lerp(from.ice[1], to.ice[1], f);
     u.uIceIrregular.value = c.iceIrregular;
     u.uIceCoast.value = c.iceCoast;
     u.uIceSoftness.value = c.iceSoftness;
@@ -126,12 +127,10 @@ export default function Globe() {
     u.uCityDensity.value = c.cityDensity;
     u.uSpecular.value = c.specular;
     u.uFresnel.value = c.fresnel;
-
-    mesh.current.rotation.y += delta * c.rotationSpeed;
   });
 
   return (
-    <mesh ref={mesh} name="globe" rotation={[0.3, -1.15, -0.12]}>
+    <mesh ref={mesh} name="globe">
       <sphereGeometry args={[1, 128, 64]} />
       <shaderMaterial
         vertexShader={vertexShader}

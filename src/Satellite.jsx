@@ -3,6 +3,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useControls } from "leva";
 import * as THREE from "three";
 import { useObjectStyle } from "./objectStyle.js";
+import { usePresence } from "./journey.js";
 import Paint from "./Paint.jsx";
 import ShipLight from "./ShipLight.jsx";
 import { orbitAxes, orbitPose } from "./orbit.js";
@@ -40,6 +41,8 @@ export default function Satellite({ label = "Satellit", size = 0.05 }) {
   const angle = useRef(2.2);
   const scene = useThree((state) => state.scene);
   const style = useObjectStyle();
+  // Sichtbarkeit und Grösse je Stadium der Reise
+  const presence = usePresence();
 
   const c = useControls(
     label,
@@ -58,7 +61,9 @@ export default function Satellite({ label = "Satellit", size = 0.05 }) {
     orbitAxes(c.inclination, c.node, axisA, axisB);
     orbitPose(axisA, axisB, angle.current, up, forward, body.current.quaternion);
     body.current.position.copy(up).multiplyScalar(c.distance);
-    body.current.scale.setScalar(c.size * style.scale);
+    const weight = presence();
+    body.current.visible = weight > 0.005;
+    body.current.scale.setScalar(c.size * style.scale * Math.max(weight, 1e-3));
 
     // Solarflügel um ihre Achse (lokal z) zur Sonne drehen: Flächennormale (lokal y) zeigt zur Sonne
     const globe = scene.getObjectByName("globe");

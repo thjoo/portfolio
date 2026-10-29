@@ -4,6 +4,7 @@ import { Billboard } from "@react-three/drei";
 import { useControls } from "leva";
 import * as THREE from "three";
 import { useObjectStyle } from "./objectStyle.js";
+import { usePresence, useArrival } from "./journey.js";
 import Paint from "./Paint.jsx";
 import { latLonToVector } from "./route.js";
 import { SmokePool } from "./smoke.js";
@@ -79,6 +80,10 @@ export default function Volcano({ label = "Vulkan", size = 0.008 }) {
   const glowMaterial = useRef();
   const scene = useThree((state) => state.scene);
   const style = useObjectStyle();
+  // Sichtbarkeit und Grösse je Stadium der Reise
+  const presence = usePresence();
+  // Beim Ankommen im Sommer (Stadium 2) bricht er aus
+  const arrived = useArrival(2);
   const geometry = useMemo(() => mountainGeometry(), []);
   const site = useMemo(() => {
     const up = latLonToVector(...SITE);
@@ -123,16 +128,19 @@ export default function Volcano({ label = "Vulkan", size = 0.008 }) {
     const sun = globe.material.uniforms.uSunDirection.value;
 
     // Berg in echter Grösse (Ätna auf Sizilien); Rauch und Glut eigenständig, sonst wären sie unsichtbar klein
-    const mountainScale = c.size * style.scale;
+    const weight = presence();
+    frame.current.visible = weight > 0.005;
+    const mountainScale = c.size * style.scale * Math.max(weight, 1e-3);
     mountain.current.scale.setScalar(mountainScale);
     crater.copy(site.up).multiplyScalar(1 + CRATER * mountainScale);
-    const scale = c.effects * style.scale;
+    const scale = c.effects * style.scale * Math.max(weight, 1e-3);
     const k = scale / 0.042;
     // Farbe wie das Land der Erde, damit der Berg zu Sizilien gehört
     landColor.copy(globe.material.uniforms.uLandDay.value);
     landNight.copy(globe.material.uniforms.uLandNight.value);
 
     // Ausbruch: schnell an, langsam ab
+    if (arrived() && s.time % c.interval > c.eruption) s.time = Math.ceil(s.time / c.interval) * c.interval;
     const cycle = s.time % c.interval;
     const erupting = cycle < c.eruption;
     const strength = erupting

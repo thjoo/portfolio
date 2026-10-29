@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, PerformanceMonitor } from "@react-three/drei";
+import { PerformanceMonitor } from "@react-three/drei";
 import { EffectComposer, Kuwahara } from "@react-three/postprocessing";
 import { Leva, useControls } from "leva";
 import Globe from "./Globe.jsx";
@@ -54,21 +54,11 @@ const INDIAN_ROUTE = [
   [13.5, 57.5],
 ];
 import Background from "./Background.jsx";
+import Journey from "./Journey.jsx";
+import Sections from "./Sections.jsx";
+import { Presence } from "./journey.js";
 import { PaperEffect } from "./PaperEffect.js";
 import { CopyPass } from "postprocessing";
-
-// Kamera-Abstand so wählen, dass die Kugel auch im Hochformat ganz sichtbar bleibt
-function FitCamera() {
-  const camera = useThree((state) => state.camera);
-  const size = useThree((state) => state.size);
-  useEffect(() => {
-    const aspect = size.width / size.height;
-    const fit = 1.45 / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-    camera.position.setLength(aspect < 1 ? fit / aspect : fit);
-    camera.updateProjectionMatrix();
-  }, [camera, size]);
-  return null;
-}
 
 function Post() {
   const size = useThree((state) => state.size);
@@ -121,7 +111,7 @@ function Post() {
     u.get("uEarthGrain").value = earth.grain;
     u.get("uEarthPooling").value = earth.pooling;
     u.get("uEarthFollow").value = earth.follow ? 1 : 0;
-    // Matrizen für dieses Bild aktualisieren: Kamera (OrbitControls) und Erde (Rotation) haben sich
+    // Matrizen für dieses Bild aktualisieren: Kamera (Reise) und Erde (Drehung) haben sich
     // in useFrame bewegt, three.js rechnet matrixWorld sonst erst beim Rendern nach -> Eis hinkt nach
     camera.updateMatrixWorld();
     scene.getObjectByName("globe")?.updateWorldMatrix(true, false);
@@ -163,69 +153,109 @@ export default function App() {
   return (
     <>
       <Leva collapsed />
-      <Canvas camera={{ position: [0, 0, 3.6], fov: 40 }} dpr={dpr}>
-        <PerformanceMonitor
-          onDecline={() => setDpr(1)}
-          onIncline={() => setDpr(Math.min(window.devicePixelRatio, 1.5))}
-          flipflops={3}
-          onFallback={() => setDpr(1)}
-        />
-        <Background />
-        <Stars />
-        <Globe />
-        <Clouds />
-        <Meteor />
-        {/* Grössen nach echter Länge gestaffelt (gestaucht, damit alle erkennbar bleiben):
-            Containerschiff ~400 m, Kreuzfahrtschiff ~300 m, Frachter ~190 m, Forschungsschiff ~120 m */}
-        <Ship label="Containerschiff" model="container" waypoints={ATLANTIC_ROUTE} start={0.35} />
-        <Ship label="Kreuzfahrtschiff" model="cruise" waypoints={PACIFIC_ROUTE} start={0.2} size={0.055} />
-        <Ship label="Forschungsschiff" model="research" waypoints={SOUTHERN_OCEAN_ROUTE} start={0.4} size={0.042} speed={0.0025} />
-        <Ship label="Frachter" model="freighter" waypoints={INDIAN_ROUTE} start={0.6} size={0.048} speed={0.003} />
-        <Balloon label="Ballon Klassik" shape="classic" stripeA="#5b7fe2" stripeB="#e8dfb4" angle={-62} height={-0.45} />
-        <Balloon
-          label="Ballon Zwiebel"
-          shape="onion"
-          stripeA="#d9614c"
-          stripeB="#f2c46b"
-          stripes={10}
-          size={0.07}
-          angle={68}
-          height={0.5}
-          distance={1.38}
-          phase={2.1}
-        />
-        <Balloon
-          label="Wetterballon"
-          kind="weather"
-          shape="weather"
-          stripeA="#e9ecf8"
-          stripeB="#e9ecf8"
-          stripes={0}
-          size={0.065}
-          angle={40}
-          height={-0.85}
-          distance={1.45}
-          phase={1.3}
-          payloadColor="#e9874a"
-        />
-        <Zeppelin />
-        <Satellite />
-        <Rocket />
-        <Volcano />
-        {/* Flugzeuge auf Grosskreisen: Zürich -> New York, London -> Kapstadt */}
-        <Airplane label="Flugzeug Zürich–New York" from={[47.46, 8.56]} to={[40.64, -73.78]} livery="#d9614c" start={0.3} />
-        <Airplane
-          label="Flugzeug London–Kapstadt"
-          from={[51.47, -0.45]}
-          to={[-33.97, 18.6]}
-          livery="#5b7fe2"
-          duration={140}
-          start={0.6}
-        />
-        <OrbitControls enablePan={false} minDistance={2} maxDistance={14} />
-        <FitCamera />
-        <Post />
-      </Canvas>
+      {/* Die Erde steht fest im Hintergrund, die Abschnitte scrollen darüber */}
+      <div className="stage">
+        <Canvas camera={{ position: [0, 0, 3.6], fov: 40 }} dpr={dpr}>
+          <PerformanceMonitor
+            onDecline={() => setDpr(1)}
+            onIncline={() => setDpr(Math.min(window.devicePixelRatio, 1.5))}
+            flipflops={3}
+            onFallback={() => setDpr(1)}
+          />
+          <Journey />
+          <Background />
+          <Stars />
+          <Globe />
+          <Presence value="clouds">
+            <Clouds />
+          </Presence>
+          <Presence value="meteor">
+            <Meteor />
+          </Presence>
+          {/* Grössen nach echter Länge gestaffelt (gestaucht, damit alle erkennbar bleiben):
+              Containerschiff ~400 m, Kreuzfahrtschiff ~300 m, Frachter ~190 m, Forschungsschiff ~120 m */}
+          <Presence value="shipContainer">
+            <Ship label="Containerschiff" model="container" waypoints={ATLANTIC_ROUTE} start={0.35} />
+          </Presence>
+          <Presence value="shipCruise">
+            <Ship label="Kreuzfahrtschiff" model="cruise" waypoints={PACIFIC_ROUTE} start={0.2} size={0.055} />
+          </Presence>
+          <Presence value="shipResearch">
+            <Ship
+              label="Forschungsschiff"
+              model="research"
+              waypoints={SOUTHERN_OCEAN_ROUTE}
+              start={0.4}
+              size={0.042}
+              speed={0.0025}
+            />
+          </Presence>
+          <Presence value="shipFreighter">
+            <Ship label="Frachter" model="freighter" waypoints={INDIAN_ROUTE} start={0.6} size={0.048} speed={0.003} />
+          </Presence>
+          <Presence value="balloonClassic">
+            <Balloon label="Ballon Klassik" shape="classic" stripeA="#5b7fe2" stripeB="#e8dfb4" angle={-62} height={-0.45} />
+          </Presence>
+          <Presence value="balloonOnion">
+            <Balloon
+              label="Ballon Zwiebel"
+              shape="onion"
+              stripeA="#d9614c"
+              stripeB="#f2c46b"
+              stripes={10}
+              size={0.07}
+              angle={68}
+              height={0.5}
+              distance={1.38}
+              phase={2.1}
+            />
+          </Presence>
+          <Presence value="weatherBalloon">
+            <Balloon
+              label="Wetterballon"
+              kind="weather"
+              shape="weather"
+              stripeA="#e9ecf8"
+              stripeB="#e9ecf8"
+              stripes={0}
+              size={0.065}
+              angle={40}
+              height={-0.85}
+              distance={1.45}
+              phase={1.3}
+              payloadColor="#e9874a"
+            />
+          </Presence>
+          <Presence value="zeppelin">
+            <Zeppelin />
+          </Presence>
+          <Presence value="satellite">
+            <Satellite />
+          </Presence>
+          <Presence value="rocket">
+            <Rocket />
+          </Presence>
+          <Presence value="volcano">
+            <Volcano />
+          </Presence>
+          {/* Flugzeuge auf Grosskreisen: Zürich -> New York, London -> Kapstadt */}
+          <Presence value="planeZurich">
+            <Airplane label="Flugzeug Zürich–New York" from={[47.46, 8.56]} to={[40.64, -73.78]} livery="#d9614c" start={0.3} />
+          </Presence>
+          <Presence value="planeLondon">
+            <Airplane
+              label="Flugzeug London–Kapstadt"
+              from={[51.47, -0.45]}
+              to={[-33.97, 18.6]}
+              livery="#5b7fe2"
+              duration={140}
+              start={0.6}
+            />
+          </Presence>
+          <Post />
+        </Canvas>
+      </div>
+      <Sections />
     </>
   );
 }

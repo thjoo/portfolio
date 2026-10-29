@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { useControls } from "leva";
 import * as THREE from "three";
 import { useObjectStyle } from "./objectStyle.js";
+import { usePresence } from "./journey.js";
 import { Envelope } from "./Balloon.jsx";
 import Paint from "./Paint.jsx";
 import ShipLight from "./ShipLight.jsx";
@@ -65,6 +66,8 @@ export default function Zeppelin({ label = "Zeppelin", size = 0.1 }) {
   const propellerRight = useRef();
   const angle = useRef(0.6);
   const style = useObjectStyle();
+  // Sichtbarkeit und Grösse je Stadium der Reise
+  const presence = usePresence();
   const profile = useMemo(() => zeppelinProfile(), []);
   const fin = useMemo(() => finGeometry(), []);
 
@@ -94,7 +97,9 @@ export default function Zeppelin({ label = "Zeppelin", size = 0.1 }) {
     body.current.position.copy(up).multiplyScalar(c.distance + Math.sin(t * 0.6) * 0.008);
     // Leichtes Nicken wie in Böen
     body.current.rotateZ(Math.sin(t * 0.45) * 0.03);
-    body.current.scale.setScalar(c.size * style.scale);
+    const weight = presence();
+    body.current.visible = weight > 0.005;
+    body.current.scale.setScalar(c.size * style.scale * Math.max(weight, 1e-3));
 
     propellerLeft.current.rotation.x += delta * 14;
     propellerRight.current.rotation.x -= delta * 14;

@@ -4,6 +4,7 @@ import { useControls } from "leva";
 import * as THREE from "three";
 import fragmentSource from "./shaders/background.frag?raw";
 import paper from "./shaders/paper.glsl?raw";
+import { blendColor } from "./journey.js";
 
 const fragmentShader = fragmentSource.replace("#include ./paper.glsl", paper);
 
@@ -38,8 +39,9 @@ export default function Background() {
     // R3F kopiert das uniforms-Objekt -> Uniforms des Materials beschreiben
     const u = mesh.current.material.uniforms;
     state.gl.getDrawingBufferSize(u.uResolution.value);
-    u.uColor.value.set(c.color);
-    u.uWashColor.value.set(c.washColor);
+    // Hintergrund je Jahreszeit der Reise
+    blendColor(u.uColor.value, "background", c.color);
+    blendColor(u.uWashColor.value, "wash", c.washColor);
     u.uWash.value = c.wash;
     u.uVignette.value = c.vignette;
   });

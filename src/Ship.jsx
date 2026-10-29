@@ -5,6 +5,7 @@ import * as THREE from "three";
 import Paint from "./Paint.jsx";
 import ShipLight from "./ShipLight.jsx";
 import { useObjectStyle } from "./objectStyle.js";
+import { usePresence } from "./journey.js";
 import { createRoute, findLandOnRoute } from "./route.js";
 import wakeVertex from "./shaders/wake.vert?raw";
 import wakeFragmentSource from "./shaders/wake.frag?raw";
@@ -410,6 +411,8 @@ export default function Ship({ label = "Containerschiff", model = "container", w
   const progress = useRef({ t: start, direction: 1 });
   const checked = useRef(false);
   const style = useObjectStyle();
+  // Sichtbarkeit und Grösse je Stadium der Reise
+  const presence = usePresence();
 
   const c = useControls(
     label,
@@ -469,7 +472,9 @@ export default function Ship({ label = "Containerschiff", model = "container", w
     ship.current.position.copy(up).multiplyScalar(1.0015);
     ship.current.quaternion.setFromRotationMatrix(basis);
     // Grösse des Schiffs mal gemeinsamer Faktor aller Objekte
-    const size = c.size * style.scale;
+    const weight = presence();
+    frame.current.visible = weight > 0.005;
+    const size = c.size * style.scale * Math.max(weight, 1e-3);
     ship.current.scale.setScalar(size);
 
     // Kielwasser: Schaumbänder hinter dem Heck, auf der Meeresoberfläche

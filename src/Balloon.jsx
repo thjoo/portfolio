@@ -3,6 +3,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Line } from "@react-three/drei";
 import { useControls } from "leva";
 import { useObjectStyle } from "./objectStyle.js";
+import { usePresence, stageWeight } from "./journey.js";
 import * as THREE from "three";
 import vertexSource from "./shaders/balloon.vert?raw";
 import fragmentSource from "./shaders/balloon.frag?raw";
@@ -112,6 +113,8 @@ export default function Balloon({
   const form = SHAPES[shape];
 
   const style = useObjectStyle();
+  // Sichtbarkeit und Grösse je Stadium der Reise
+  const presence = usePresence();
   const c = useControls(
     label,
     {
@@ -146,6 +149,12 @@ export default function Balloon({
   useFrame((state, delta) => {
     // Langsam um die Erde, dazu leichtes Wippen
     orbit.current.rotation.y += delta * style.orbitSpeed;
+    // Im Herbst (Stadium 3) ziehen alle Ballone zurück an ihren Platz vor der Erde, damit man sie sieht
+    const autumn = stageWeight(3);
+    if (autumn > 0) {
+      const r = THREE.MathUtils.euclideanModulo(orbit.current.rotation.y + Math.PI, Math.PI * 2) - Math.PI;
+      orbit.current.rotation.y = r - r * Math.min(autumn * delta * 1.5, 1);
+    }
     const t = state.clock.elapsedTime + phase;
     const a = THREE.MathUtils.degToRad(c.angle);
     const horizontal = Math.sqrt(Math.max(c.distance * c.distance - c.height * c.height, 0.01));
@@ -167,7 +176,9 @@ export default function Balloon({
       0,
       Math.sin(w * 0.9 + 1.1) * amplitude
     );
-    body.current.scale.setScalar(c.size * style.scale);
+    const weight = presence();
+    orbit.current.visible = weight > 0.005;
+    body.current.scale.setScalar(c.size * style.scale * Math.max(weight, 1e-3));
   });
 
   return (

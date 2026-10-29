@@ -3,6 +3,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useControls } from "leva";
 import * as THREE from "three";
 import { useObjectStyle } from "./objectStyle.js";
+import { usePresence, blendColor, blendNumber } from "./journey.js";
 import { latLonToVector } from "./route.js";
 import noise from "./shaders/noise.glsl?raw";
 import sunlight from "./shaders/sunlight.glsl?raw";
@@ -67,6 +68,8 @@ const fragmentShader = /* glsl */ `
   uniform vec3 uSunDirection;
   uniform float uTime;
   uniform float uCurls;
+  uniform vec3 uTint;
+  uniform float uTintMix;
   varying vec2 vP;
   varying vec3 vColor;
   varying float vSeed;
@@ -143,6 +146,8 @@ const fragmentShader = /* glsl */ `
 
   void main() {
     vec2 p = vP;
+    // Farbe je Jahreszeit: eigene Farbe der Wolke zur Tönung hin mischen
+    vec3 tone = mix(vColor, uTint, uTintMix);
     float d = cloudShape(p) + snoise(vec3(p * 5.0, vSeed)) * 0.015;
     vec3 nb = nearestBump(p);
 
@@ -177,13 +182,13 @@ const fragmentShader = /* glsl */ `
       float cArc = pencil(tC, dC, 1.6) * inBump * uCurls * 0.6;
 
       // Papier zwischen den Strichen: dunkler Grund, leicht in der Farbe getönt
-      vec3 paper = vColor * 0.68;
-      vec3 deep = vColor * 0.88;
-      vec3 bright = mix(vColor, vec3(1.0), 0.22 + 0.25 * top);
+      vec3 paper = tone * 0.68;
+      vec3 deep = tone * 0.88;
+      vec3 bright = mix(tone, vec3(1.0), 0.22 + 0.25 * top);
       color = paper;
-      color = mix(color, mix(deep, vColor, top), a);
-      color = mix(color, mix(vColor, bright, top), b * 0.9);
-      color = mix(color, mix(vColor, vec3(1.0), 0.3), cArc);
+      color = mix(color, mix(deep, tone, top), a);
+      color = mix(color, mix(tone, bright, top), b * 0.9);
+      color = mix(color, mix(tone, vec3(1.0), 0.3), cArc);
       // Dicht gemalt: die Striche decken fast alles, Lücken sind halb durchsichtig
       float cover = max(max(a, b), cArc);
       alpha = shape * mix(0.8, 1.0, cover);
@@ -222,6 +227,8 @@ export default function Clouds() {
   const mesh = useRef();
   const scene = useThree((state) => state.scene);
   const style = useObjectStyle();
+  // Sichtbarkeit und Grösse je Stadium der Reise
+  const presence = usePresence();
 
   // Fläche etwas breiter als hoch; unten Platz für den Blitz
   const geometry = useMemo(() => {
@@ -236,7 +243,13 @@ export default function Clouds() {
     return g;
   }, []);
   const uniforms = useMemo(
-    () => ({ uSunDirection: { value: new THREE.Vector3(0, 0, 1) }, uTime: { value: 0 }, uCurls: { value: 1 } }),
+    () => ({
+      uSunDirection: { value: new THREE.Vector3(0, 0, 1) },
+      uTime: { value: 0 },
+      uCurls: { value: 1 },
+      uTint: { value: new THREE.Color("#ffffff") },
+      uTintMix: { value: 0 },
+    }),
     []
   );
 
@@ -258,7 +271,9 @@ export default function Clouds() {
     globe.updateWorldMatrix(true, false);
     frame.current.matrix.copy(globe.matrixWorld);
     const t = clock.elapsedTime;
-    const size = c.size * style.scale;
+    const weight = presence();
+    frame.current.visible = weight > 0.005;
+    const size = c.size * style.scale * Math.max(weight, 1e-3);
 
     CLOUDS.forEach(([lat, lon, scale], i) => {
       // Mit dem Wind langsam nach Osten, dazu leichtes Pendeln in der Breite
@@ -277,6 +292,8 @@ export default function Clouds() {
     u.uSunDirection.value.copy(globe.material.uniforms.uSunDirection.value);
     u.uTime.value = t;
     u.uCurls.value = c.curls;
+    blendColor(u.uTint.value, "cloud", "#ffffff");
+    u.uTintMix.value = blendNumber("cloudMix", 0);
   });
 
   return (

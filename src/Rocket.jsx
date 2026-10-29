@@ -4,6 +4,7 @@ import { Billboard } from "@react-three/drei";
 import { useControls } from "leva";
 import * as THREE from "three";
 import { useObjectStyle } from "./objectStyle.js";
+import { usePresence, useArrival } from "./journey.js";
 import Paint from "./Paint.jsx";
 import { latLonToVector } from "./route.js";
 import glowFragment from "./shaders/glow.frag?raw";
@@ -117,6 +118,10 @@ export default function Rocket({ label = "Rakete", size = 0.06 }) {
   const glowMaterial = useRef();
   const scene = useThree((state) => state.scene);
   const style = useObjectStyle();
+  // Sichtbarkeit und Grösse je Stadium der Reise
+  const presence = usePresence();
+  // Beim Ankommen im Frühling (Stadium 1) sofort zünden
+  const arrived = useArrival(1);
 
   // Rauchwolken in Erd-Koordinaten (Kind des Rahmens, dreht mit)
   const smoke = useMemo(() => new SmokePool(900), []);
@@ -187,7 +192,9 @@ export default function Rocket({ label = "Rakete", size = 0.06 }) {
     const s = state.current;
     const dt = Math.min(delta, 0.05);
     s.time += dt;
-    const scale = c.size * style.scale;
+    const weight = presence();
+    frame.current.visible = weight > 0.005;
+    const scale = c.size * style.scale * Math.max(weight, 1e-3);
 
     // Rahmen folgt der Erde (erst deren aktuelle Rotation übernehmen, sonst hinkt die Rakete nach)
     globe.updateWorldMatrix(true, false);
@@ -198,6 +205,7 @@ export default function Rocket({ label = "Rakete", size = 0.06 }) {
     let power = 0;
     let flameAt = 0;
 
+    if (arrived() && s.phase === "pad") s.time = Math.max(s.time, c.pause - 3.5);
     if (s.phase === "pad") {
       // Auf der Rampe; die letzten Sekunden zündet das Triebwerk in einer wachsenden Rauchwolke
       trajectory(0, pos);
