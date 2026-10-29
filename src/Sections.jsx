@@ -9,7 +9,7 @@ const CARDS = [
   { stage: 3, title: "4. Klasse", lines: ["4.KL", "ASSE"], text: "Themen und Skripte folgen.", accent: "#ffcf8a", symbol: "☀" },
   { stage: 4, title: "5. Klasse", lines: ["5.KL", "ASSE"], text: "Inhalte zur Sonderwoche folgen.", accent: "#f0a56a", symbol: "❦" },
   { stage: 5, title: "6. Klasse", lines: ["6.KL", "ASSE"], text: "Themen und Skripte folgen.", accent: "#cfe2ff", symbol: "❄" },
-  { stage: 6, title: "Kontakt", lines: ["KON", "TAKT"], text: "Text über mich und Kontaktangaben folgen.", accent: "#9fa8ff", symbol: "✉" },
+  { stage: 6, title: "Kontakt", lines: ["KON", "TAKT"], size: 0.4, text: "Text über mich und Kontaktangaben folgen.", accent: "#9fa8ff", symbol: "✉" },
 ];
 
 const smoothstep = (a, b, x) => {
@@ -59,9 +59,9 @@ export default function Sections() {
         // etwa auf der oberen Erdhälfte -> die Erde schiebt sich davor. Grösse passt in den Platz links
         // daneben (offsetWidth/Height ohne Transform; nur bei spürbarer Änderung neu setzen)
         const margin = window.innerWidth * 0.03;
-        const tuck = x - r * 0.62; // so weit reicht der Titel hinter die Erde
+        const tuck = x - r * 0.8; // so weit reicht der Titel hinter die Erde
         const current = parseFloat(title.style.fontSize) || parseFloat(getComputedStyle(title).fontSize);
-        const max = Math.min(window.innerHeight * 0.26, 260);
+        const max = Math.min(window.innerHeight * (CARDS[i].size ?? 0.26), 420);
         const wanted = Math.max(Math.min((current * (tuck - margin)) / Math.max(title.offsetWidth, 1), max), 40);
         if (Math.abs(wanted - current) > 0.5) title.style.fontSize = `${wanted}px`;
         const left = Math.max(tuck - title.offsetWidth, margin);

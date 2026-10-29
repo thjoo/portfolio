@@ -135,8 +135,8 @@ export const STAGES = [
   {
     id: "about",
     view: [18, -104],
-    zoom: 1.15,
-    shift: 0.16,
+    zoom: 1.35,
+    shift: 0.27,
     palette: null,
     ice: [0, 1],
     sun: [-72, 0.25],
