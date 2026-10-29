@@ -91,8 +91,8 @@ export const STAGES = [
   {
     id: "spring",
     view: [26, -84],
-    zoom: 0.62,
-    shift: 0.2,
+    zoom: 0.72,
+    shift: 0.27,
     palette: SPRING,
     ice: [0.45, 0.55],
     sun: [-55, 0.05],
@@ -102,8 +102,8 @@ export const STAGES = [
   {
     id: "summer",
     view: [37, 14],
-    zoom: 0.45,
-    shift: 0.2,
+    zoom: 0.6,
+    shift: 0.29,
     palette: SUMMER,
     ice: [0, 1],
     sun: [-45, 0.45],
@@ -124,8 +124,8 @@ export const STAGES = [
   {
     id: "winter",
     view: [-42, -66],
-    zoom: 0.66,
-    shift: 0.2,
+    zoom: 0.76,
+    shift: 0.27,
     palette: WINTER,
     ice: [1, 0.15],
     sun: [-60, -0.35],

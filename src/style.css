@@ -7,7 +7,7 @@
   --font-hand: "Covered By Your Grace", "Comic Sans MS", cursive;
   --font-display: var(--font-hand);
   /* Schwere Titelschrift als Kontrast zur Handschrift */
-  --font-title: "Climate Crisis", Impact, "Arial Narrow", sans-serif;
+  --font-title: "Archivo", "Arial Black", sans-serif;
   --font-body: var(--font-hand);
 }
 
@@ -52,19 +52,33 @@ body {
 
 .page-title {
   position: absolute;
-  left: 4vw;
-  top: 6vh;
+  left: 1vw;
+  top: -2vh;
   margin: 0;
+  display: flex;
+  flex-direction: column;
   font-family: var(--font-title);
-  font-weight: 400;
-  font-size: clamp(2.6rem, 7vw, 7rem);
-  line-height: 0.9;
-  /* Climate Crisis wird mit den Jahren dünner (1979 dick … 2050 dünn): etwas weniger fett */
-  font-variation-settings: "YEAR" 2018;
+  font-weight: 900;
+  font-variation-settings: "wdth" 112;
+  font-size: clamp(6rem, 40vh, 26rem);
+  line-height: 0.76;
   text-transform: uppercase;
   white-space: nowrap;
-  color: var(--ink);
+  color: var(--accent);
   will-change: transform, opacity;
+  --scatter: 0;
+}
+
+.page-title-line {
+  display: flex;
+}
+
+/* Jeder Buchstabe leicht gekippt und versetzt, eng ineinander geschoben */
+.page-title-letter {
+  display: inline-block;
+  margin-right: -0.07em;
+  transform: translateY(calc(var(--y) * 1em * (1 + var(--scatter) * 3)))
+    rotate(calc(var(--r) * 1deg * (1 + var(--scatter) * 2)));
 }
 
 /* Text in Handschrift unten links, vor der Erde */
@@ -213,9 +227,9 @@ body {
 /* Schmal: Text unten, Erde oben (die Kamera schiebt sie hoch) */
 @media (max-width: 760px) {
   .page-title {
-    left: 16px;
-    top: 4vh;
-    font-size: 11vw;
+    left: 8px;
+    top: 3vh;
+    font-size: 30vw;
   }
   .page-text {
     left: 16px;

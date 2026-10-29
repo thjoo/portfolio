@@ -4,18 +4,26 @@ import { SECTION_VH, STAGES, journey } from "./journey.js";
 // Texte der Reise, einer pro Stadium (ab Stadium 1; am Anfang nur die Erde). Inhalte folgen später.
 // Jahreszeiten stehen bewusst nicht im Text: sie sollen sich an der Erde selbst zeigen.
 const CARDS = [
-  { stage: 1, title: "1.–2. Klasse", text: "Themen und Skripte folgen.", accent: "#9fa8ff", symbol: "◐" },
-  { stage: 2, title: "3. Klasse", text: "Themen und Skripte folgen.", accent: "#a6e6b4", symbol: "✿" },
-  { stage: 3, title: "4. Klasse", text: "Themen und Skripte folgen.", accent: "#ffcf8a", symbol: "☀" },
-  { stage: 4, title: "5. Klasse", text: "Inhalte zur Sonderwoche folgen.", accent: "#f0a56a", symbol: "❦" },
-  { stage: 5, title: "6. Klasse", text: "Themen und Skripte folgen.", accent: "#cfe2ff", symbol: "❄" },
-  { stage: 6, title: "Kontakt", text: "Text über mich und Kontaktangaben folgen.", accent: "#9fa8ff", symbol: "✉" },
+  { stage: 1, title: "1.–2. Klasse", lines: ["1.–2.", "KLASSE"], text: "Themen und Skripte folgen.", accent: "#9fa8ff", symbol: "◐" },
+  { stage: 2, title: "3. Klasse", lines: ["3.KL", "ASSE"], text: "Themen und Skripte folgen.", accent: "#a6e6b4", symbol: "✿" },
+  { stage: 3, title: "4. Klasse", lines: ["4.KL", "ASSE"], text: "Themen und Skripte folgen.", accent: "#ffcf8a", symbol: "☀" },
+  { stage: 4, title: "5. Klasse", lines: ["5.KL", "ASSE"], text: "Inhalte zur Sonderwoche folgen.", accent: "#f0a56a", symbol: "❦" },
+  { stage: 5, title: "6. Klasse", lines: ["6.KL", "ASSE"], text: "Themen und Skripte folgen.", accent: "#cfe2ff", symbol: "❄" },
+  { stage: 6, title: "Kontakt", lines: ["KON", "TAKT"], text: "Text über mich und Kontaktangaben folgen.", accent: "#9fa8ff", symbol: "✉" },
 ];
 
 const smoothstep = (a, b, x) => {
   const t = Math.min(Math.max((x - a) / (b - a), 0), 1);
   return t * t * (3 - 2 * t);
 };
+
+// Feste „Zufalls“-Neigung und -Versatz je Buchstabe (gleich bei jedem Laden), wie lose hingeworfen
+const hash = (n) => {
+  const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
+};
+const tilt = (n) => ((hash(n) - 0.5) * 30).toFixed(1); // Grad
+const lift = (n) => ((hash(n + 19) - 0.5) * 0.14).toFixed(3); // em
 
 function sectionHeight() {
   return (window.innerHeight * SECTION_VH) / 100;
@@ -56,6 +64,8 @@ export default function Sections() {
         title.dataset.tx = tx;
         title.dataset.ty = ty;
         title.style.transform = `translate(${tx}px, ${ty}px) scale(${1 - 0.3 * out})`;
+        // Buchstaben purzeln beim Hervorkommen stärker und setzen sich dann
+        title.style.setProperty("--scatter", out.toFixed(3));
         title.style.opacity = String(1 - smoothstep(0.6, 1, out));
         layer.style.maskImage = mask;
         layer.style.webkitMaskImage = mask;
@@ -99,8 +109,24 @@ export default function Sections() {
       <div className="cards">
         {CARDS.map((card, i) => (
           <div key={card.stage} className="title-layer" ref={(el) => (layers.current[i] = el)} aria-hidden={active !== i}>
-            <h2 className="page-title" ref={(el) => (cards.current[i] = el)}>
-              {card.title}
+            <h2
+              className="page-title"
+              ref={(el) => (cards.current[i] = el)}
+              style={{ "--accent": card.accent }}
+              aria-label={card.title}
+            >
+              {card.lines.map((line, l) => (
+                <span key={l} className="page-title-line" aria-hidden="true">
+                  {[...line].map((letter, k) => {
+                    const n = card.stage * 31 + l * 7 + k;
+                    return (
+                      <span key={k} className="page-title-letter" style={{ "--r": tilt(n), "--y": lift(n) }}>
+                        {letter}
+                      </span>
+                    );
+                  })}
+                </span>
+              ))}
             </h2>
           </div>
         ))}
