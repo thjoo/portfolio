@@ -17,21 +17,6 @@ const smoothstep = (a, b, x) => {
   return t * t * (3 - 2 * t);
 };
 
-// Wort, dessen Buchstaben nacheinander nach oben wegrollen und von unten wiederkommen (wie ein Ticker).
-// Jeder Buchstabe steht zweimal übereinander; verschoben wird um eine Zeile, danach unsichtbar zurück
-function RollingWord({ word, offset }) {
-  return (
-    <span className="roll">
-      {[...word].map((letter, i) => (
-        <span key={i} className="roll-letter" style={{ "--i": i + offset }}>
-          <span>{letter === " " ? "\u00a0" : letter}</span>
-          <span>{letter === " " ? "\u00a0" : letter}</span>
-        </span>
-      ))}
-    </span>
-  );
-}
-
 function sectionHeight() {
   return (window.innerHeight * SECTION_VH) / 100;
 }
@@ -123,8 +108,8 @@ export default function Sections() {
       </div>
       <button type="button" className="scroll-cue" ref={cue} onClick={() => go(1)} aria-label="Nach unten scrollen">
         <span className="scroll-cue-text" aria-hidden="true">
-          <RollingWord word="nach unten" offset={0} />
-          <RollingWord word="scrollen" offset={10} />
+          <span>nach unten</span>
+          <span>scrollen</span>
         </span>
         <svg className="scroll-cue-arrow" viewBox="0 0 12 22" width="12" height="22" aria-hidden="true">
           <path d="M6 1 C5.6 7 6.4 13 6 20 M1.5 15.5 C3.5 17 5 18.6 6 20.5 C7 18.6 8.5 17 10.5 15.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
