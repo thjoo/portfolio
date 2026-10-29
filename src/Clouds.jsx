@@ -70,21 +70,25 @@ const fragmentShader = /* glsl */ `
     return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
   }
 
-  // Umriss: Bögen oben (in der Mitte höher), flache Unterkante
+  // Umriss: unregelmässige Bögen oben (Anzahl, Grösse und Höhe je Wolke verschieden), flache Unterkante
   float cloudShape(vec2 p) {
-    float d = sdRoundBox(p - vec2(0.0, -0.17), vec2(0.82, 0.14), 0.12);
-    for (int i = 0; i < 5; i++) {
-      float f = float(i) / 4.0;
+    float d = sdRoundBox(p - vec2(0.0, -0.18), vec2(0.8, 0.12), 0.11);
+    float count = 4.0 + floor(hash(vSeed * 3.1) * 3.0);
+    for (int i = 0; i < 7; i++) {
+      float fi = float(i);
+      if (fi >= count) break;
+      float f = fi / (count - 1.0);
       float middle = 1.0 - abs(f - 0.5) * 2.0;
-      vec2 c = vec2(mix(-0.62, 0.62, f) + (hash(vSeed + f * 7.0) - 0.5) * 0.08, -0.08 + 0.2 * middle);
-      float r = 0.2 + 0.13 * middle + (hash(vSeed + f * 13.0) - 0.5) * 0.05;
+      float h = hash(vSeed + fi * 7.3);
+      vec2 c = vec2(mix(-0.64, 0.64, f) + (hash(vSeed + fi * 5.1) - 0.5) * 0.16, -0.1 + (0.12 + 0.2 * h) * (0.45 + 0.55 * middle));
+      float r = (0.17 + 0.13 * middle) * (0.75 + 0.5 * hash(vSeed + fi * 13.0));
       d = min(d, length(p - c) - r);
     }
     // Flache Unterkante
-    return max(d, -0.31 - p.y);
+    return max(d, -0.3 - p.y);
   }
 
-  // Kleine Farbstift-Schlaufen: Kreise in einem lockeren Raster, je Zelle leicht versetzt
+  // Lockere Farbstift-Schlaufen: verschieden grosse, leicht ovale Kringel, nicht jede Zelle hat einen
   float curls(vec2 p, float width) {
     vec2 g = p / 0.2;
     vec2 cell = floor(g);
@@ -93,10 +97,14 @@ const fragmentShader = /* glsl */ `
       for (int x = -1; x <= 1; x++) {
         vec2 id = cell + vec2(float(x), float(y));
         vec2 h = hash2(id + vSeed);
-        vec2 c = id + 0.5 + (h - 0.5) * 0.8;
-        float radius = 0.38 + 0.3 * h.x;
-        float ring = abs(length(g - c) - radius);
-        stroke = max(stroke, 1.0 - smoothstep(width * 0.5, width, ring));
+        if (h.y < 0.25) continue;
+        vec2 c = id + 0.5 + (h - 0.5) * 1.1;
+        vec2 q = (g - c) * vec2(1.0, 1.25 + 0.4 * h.y);
+        float radius = 0.3 + 0.5 * h.x;
+        float ring = abs(length(q) - radius);
+        // Strich mit wechselndem Druck
+        float pressure = 0.55 + 0.45 * sin(atan(q.y, q.x) * 2.0 + h.x * 6.28);
+        stroke = max(stroke, (1.0 - smoothstep(width * 0.4, width, ring)) * pressure);
       }
     }
     return stroke;
@@ -117,7 +125,7 @@ const fragmentShader = /* glsl */ `
   void main() {
     vec2 p = vP;
     // Umriss leicht zittrig wie von Hand gezogen
-    float wobble = snoise(vec3(p * 9.0, vSeed)) * 0.018;
+    float wobble = snoise(vec3(p * 7.0, vSeed)) * 0.03;
     float d = cloudShape(p) + wobble;
     float aa = fwidth(d) * 1.2;
     float inside = 1.0 - smoothstep(-aa, aa, d);
@@ -135,12 +143,15 @@ const fragmentShader = /* glsl */ `
       // Am Rand sammelt sich mehr Farbe
       base *= 1.0 - (1.0 - smoothstep(0.0, 0.05, -d)) * 0.18;
       // Helle Schlaufen darüber, oben deutlicher
-      float loops = curls(p + vec2(vSeed * 0.37, 0.0), 0.2) * uCurls;
+      float loops = curls(p + vec2(vSeed * 0.37, 0.0), 0.16) * uCurls;
       base = mix(base, mix(vColor, vec3(1.0), 0.3), loops * (0.3 + 0.3 * top));
       // Papierkorn des Farbstifts
       base *= 1.0 + snoise(vec3(p * 60.0, vSeed)) * 0.05;
       color = base;
-      alpha = inside;
+      // Farbstift deckt nicht ganz: zum Rand hin schimmert das Papier in kleinen Lücken durch
+      float edge = 1.0 - smoothstep(0.0, 0.12, -d);
+      float tooth = snoise(vec3(p * 38.0, vSeed + 4.0)) * 0.5 + 0.5;
+      alpha = inside * (1.0 - edge * smoothstep(0.45, 0.85, tooth) * 0.7) * (0.9 + 0.1 * tooth);
     }
     if (vBolt > 0.5) {
       // Blitz zuckt ab und zu auf
@@ -188,7 +199,7 @@ export default function Clouds() {
     "Wolken",
     {
       visible: { value: true, label: "an" },
-      size: { value: 0.14, min: 0.03, max: 0.3, label: "Grösse" },
+      size: { value: 0.18, min: 0.03, max: 0.3, label: "Grösse" },
       altitude: { value: 0.06, min: 0.01, max: 0.3, label: "Höhe" },
       speed: { value: 0.6, min: 0, max: 5, label: "Wind (°/s)" },
       curls: { value: 1, min: 0, max: 1.5, label: "Schlaufen" },
