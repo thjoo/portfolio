@@ -55,14 +55,19 @@ export default function Sections() {
         layer.style.visibility = visible ? "visible" : "hidden";
         text.style.visibility = visible ? "visible" : "hidden";
         if (!visible) return;
-        // Grösse so, dass der Titel nur ein Stück hinter dem linken Erdrand verschwindet
-        // (offsetWidth ohne Transform; nur bei spürbarer Änderung neu setzen)
-        const left = title.offsetLeft;
-        const target = x - r * 0.82 - left;
+        // Titel hängt an der Erde: sein rechtes Ende liegt ein Stück hinter der Erdscheibe, in der Höhe
+        // etwa auf der oberen Erdhälfte -> die Erde schiebt sich davor. Grösse passt in den Platz links
+        // daneben (offsetWidth/Height ohne Transform; nur bei spürbarer Änderung neu setzen)
+        const margin = window.innerWidth * 0.03;
+        const tuck = x - r * 0.62; // so weit reicht der Titel hinter die Erde
         const current = parseFloat(title.style.fontSize) || parseFloat(getComputedStyle(title).fontSize);
         const max = Math.min(window.innerHeight * 0.26, 260);
-        const wanted = Math.max(Math.min((current * target) / Math.max(title.offsetWidth, 1), max), 40);
+        const wanted = Math.max(Math.min((current * (tuck - margin)) / Math.max(title.offsetWidth, 1), max), 40);
         if (Math.abs(wanted - current) > 0.5) title.style.fontSize = `${wanted}px`;
+        const left = Math.max(tuck - title.offsetWidth, margin);
+        const top = Math.max(y - r * 0.55 - title.offsetHeight * 0.5, window.innerHeight * 0.03);
+        title.style.left = `${left}px`;
+        title.style.top = `${top}px`;
         // Weg vom Platz des Titels zur Erdmitte
         const box = title.getBoundingClientRect();
         const cx = box.left - (parseFloat(title.dataset.tx) || 0) + box.width / 2;
