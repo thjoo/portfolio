@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { SECTION_VH, STAGES, journey } from "./journey.js";
 
-// Texte der Reise, einer pro Stadium (ab Stadium 1; am Anfang nur die Erde). Inhalte folgen später.
+// Texte der Reise, einer pro Stadium (ab Stadium 1; am Anfang nur die Erde).
+// ENTWURF: kurze Zusammenfassungen nach üblichem Lehrplan Geografie, noch an den eigenen Unterricht anpassen.
 // Jahreszeiten stehen bewusst nicht im Text: sie sollen sich an der Erde selbst zeigen.
 const CARDS = [
-  { stage: 1, title: "1.–2. Klasse", lines: ["1.–2.", "KLASSE"], text: "Themen und Skripte folgen.", accent: "#9fa8ff", symbol: "◐" },
-  { stage: 2, title: "3. Klasse", lines: ["3.KL", "ASSE"], text: "Themen und Skripte folgen.", accent: "#a6e6b4", symbol: "✿" },
-  { stage: 3, title: "4. Klasse", lines: ["4.KL", "ASSE"], text: "Themen und Skripte folgen.", accent: "#ffcf8a", symbol: "☀" },
-  { stage: 4, title: "5. Klasse", lines: ["5.KL", "ASSE"], text: "Inhalte zur Sonderwoche folgen.", accent: "#f0a56a", symbol: "❦" },
-  { stage: 5, title: "6. Klasse", lines: ["6.KL", "ASSE"], text: "Themen und Skripte folgen.", accent: "#cfe2ff", symbol: "❄" },
+  { stage: 1, title: "1.–2. Klasse", lines: ["1.–2.", "KLASSE"], text: "Wir lernen die Erde kennen: Karten lesen, sich orientieren, die Schweiz und ihre Landschaften. Dazu Wetter, Tag und Nacht und warum es Jahreszeiten gibt.", accent: "#9fa8ff", symbol: "◐" },
+  { stage: 2, title: "3. Klasse", lines: ["3.KL", "ASSE"], text: "Was die Erde formt: Gesteine, Plattentektonik, Erdbeben und Gebirge. Und wie Wasser und Eis die Landschaft über lange Zeit verändern.", accent: "#a6e6b4", symbol: "✿" },
+  { stage: 3, title: "4. Klasse", lines: ["4.KL", "ASSE"], text: "Wetter und Klima: warum es regnet, wie Klimazonen entstehen und was der Klimawandel für uns bedeutet. Dazu Vulkane und Naturgefahren.", accent: "#ffcf8a", symbol: "☀" },
+  { stage: 4, title: "5. Klasse", lines: ["5.KL", "ASSE"], text: "Kein Geografieunterricht, dafür die Sonderwoche: draussen unterwegs, beobachten, messen und die Landschaft selbst erleben.", accent: "#f0a56a", symbol: "❦" },
+  { stage: 5, title: "6. Klasse", lines: ["6.KL", "ASSE"], text: "Die Welt im Zusammenhang: Bevölkerung, Städte, Ressourcen und Globalisierung. Wie hängt unser Alltag mit dem Rest der Welt zusammen?", accent: "#cfe2ff", symbol: "❄" },
   { stage: 6, title: "Kontakt", lines: ["KON", "TAKT"], size: 0.4, text: "Text über mich und Kontaktangaben folgen.", accent: "#9fa8ff", symbol: "✉" },
 ];
 
