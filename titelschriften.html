@@ -8,9 +8,16 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Jost:wght@500;700;800&family=League+Spartan:wght@500;700;800&family=Covered+By+Your+Grace&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Covered+By+Your+Grace&display=swap"
       rel="stylesheet"
     />
+    <!-- Fontshare (Indian Type Foundry): frei, auch kommerziell -->
+    <link
+      href="https://api.fontshare.com/v2/css?f[]=nippo@500,700&f[]=tanker@400&f[]=melodrama@700&f[]=gambarino@400&f[]=telma@700&f[]=bonny@700&f[]=chubbo@700&f[]=boska@700&f[]=zodiak@700&f[]=erode@700&f[]=kola@400&f[]=rowan@700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Fontsource: Bagnard (Sébastien Sanfilippo, frei) -->
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/bagnard@5.1.0/index.css" rel="stylesheet" />
     <style>
       body {
         margin: 0;
@@ -90,30 +97,35 @@
   <body>
     <header>
       <h1>Titelschriften zur Handschrift</h1>
-      Der Titel liegt hinter der Erde, der Text in Handschrift unten links. Futura und freie Futura-ähnliche Schriften in
-      verschiedenen Stärken.
+      Der Titel liegt hinter der Erde, der Text in Handschrift unten links. Dritte Auswahl: eigenständige freie Schriften
+      von Fontshare und Fontsource, abseits der üblichen Google Fonts.
     </header>
     <main class="grid" id="grid"></main>
     <script>
-      // Futura ist auf dem Mac installiert (lokal sichtbar); fürs Web bräuchte sie eine Lizenz.
-      // Jost und League Spartan sind freie, Futura-ähnliche Schriften (Google Fonts)
+      // Dritte Auswahl: eigenständige Schriften von Fontshare und Fontsource, abseits der üblichen Google Fonts
       const fonts = [
-        ["Futura", "Original (Mac), Medium", "500"],
-        ["Futura", "Original (Mac), Bold", "700"],
-        ["Futura", "Original (Mac), Condensed ExtraBold", "800", "condensed"],
-        ["Jost", "frei, sehr nah an Futura, Medium", "500"],
-        ["Jost", "frei, Bold", "700"],
-        ["Jost", "frei, ExtraBold", "800"],
-        ["League Spartan", "frei, Futura-ähnlich, etwas kräftiger, Medium", "500"],
-        ["League Spartan", "frei, Bold", "700"],
+        ["Nippo", "geometrisch wie Futura, aber mit mehr Eigenheit", "700"],
+        ["Nippo", "dieselbe, Medium", "500"],
+        ["Tanker", "schmal und kräftig, wie mit dem Pinsel gemalt", "400"],
+        ["Melodrama", "schmale Serife, Plakat und Buchtitel", "700"],
+        ["Gambarino", "weiche, verspielte Serife", "400"],
+        ["Bagnard", "kantige Serife mit Handwerk-Charakter", "400"],
+        ["Erode", "warme Serife, ruhig", "700"],
+        ["Zodiak", "kräftige Buchserife", "700"],
+        ["Boska", "Serife mit starken Kontrasten", "700"],
+        ["Telma", "rund und eigenwillig", "700"],
+        ["Bonny", "rund und fett, freundlich", "700"],
+        ["Chubbo", "gedrungen und fröhlich", "700"],
+        ["Kola", "verspielte Plakatschrift", "400"],
+        ["Rowan", "markante Serife", "700"],
       ];
       const grid = document.getElementById("grid");
-      fonts.forEach(([name, note, weight, stretch], i) => {
+      fonts.forEach(([name, note, weight], i) => {
         const el = document.createElement("div");
         el.className = "stage";
         el.innerHTML = `
           <span class="label">${i + 1}. ${name} – ${note}</span>
-          <h2 class="title" style="font-family: '${name}', sans-serif; font-weight: ${weight}; font-stretch: ${stretch || "normal"}; ${stretch ? "font-family: 'Futura Condensed ExtraBold', Futura, sans-serif;" : ""}">3. Klasse</h2>
+          <h2 class="title" style="font-family: '${name}', sans-serif; font-weight: ${weight}">3. Klasse</h2>
           <div class="earth"></div>
           <p class="text">Themen und Skripte: Höhenstufen, Flüsse und Gewässer, Klimazonen.</p>`;
         grid.appendChild(el);
