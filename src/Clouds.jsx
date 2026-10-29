@@ -93,21 +93,26 @@ const fragmentShader = /* glsl */ `
     return max(d, -0.29 + 0.1 * p.x * p.x - p.y);
   }
 
-  // Helle Bogenlinien, die die oberen Bögen nachzeichnen (wie Kreide, die über die Wölbung gezogen ist)
-  float bumpArcs(vec2 p, float width) {
+  // Nächster Bogen: Mittelpunkt und Abstand zum Rand (für Striche, die der Wölbung folgen)
+  vec3 nearestBump(vec2 p) {
     float count = bumpCount();
-    float arcs = 0.0;
+    vec3 best = vec3(0.0, 0.0, 1e3);
     for (int i = 0; i < 5; i++) {
       float fi = float(i);
       if (fi >= count) break;
       vec2 c; float r;
       bump(fi, count, c, r);
-      vec2 q = p - c;
-      float ring = abs(length(q) - r * (0.82 + 0.06 * hash(vSeed + fi)));
-      float upper = smoothstep(-0.1, 0.5, q.y / r);
-      arcs = max(arcs, (1.0 - smoothstep(width * 0.4, width, ring)) * upper);
+      float d = length(p - c) - r;
+      if (d < best.z) best = vec3(c, d);
     }
-    return arcs;
+    return best;
+  }
+
+  // Ein dünner Farbstiftstrich: t läuft quer zu den Strichen, je ganze Zahl ein Strich.
+  // dt = Pixelgrösse von t (vorab bestimmt), Breite in Pixeln
+  float pencil(float t, float dt, float widthPx) {
+    float distPx = abs(fract(t) - 0.5) / max(dt, 1e-4);
+    return 1.0 - smoothstep(widthPx * 0.5, widthPx, distPx);
   }
 
   // Blitz: Zickzack unter der Wolke
@@ -124,25 +129,50 @@ const fragmentShader = /* glsl */ `
 
   void main() {
     vec2 p = vP;
-    // Kreide: Rand weich und ausgefranst, nicht scharf gezogen
-    float grain = snoise(vec3(p * 45.0, vSeed)) * 0.6 + snoise(vec3(p * 110.0, vSeed + 2.0)) * 0.4;
     float d = cloudShape(p) + snoise(vec3(p * 5.0, vSeed)) * 0.015;
-    float alpha = 1.0 - smoothstep(-0.04, 0.012, d + grain * 0.022);
+    vec3 nb = nearestBump(p);
+
+    // Drei Lagen dünner Striche, wie mit Farbstift dicht übereinander gekritzelt:
+    // A und B verwirbelt in zwei Richtungen über den Körper, C in Bögen um die Wölbungen oben
+    float warp = snoise(vec3(p * 2.6, vSeed)) * 2.4 + snoise(vec3(p * 8.0, vSeed + 3.0)) * 0.5;
+    float tA = dot(p, vec2(0.25, 1.0)) * 18.0 + warp * 1.4;
+    float tB = dot(p, vec2(1.0, -0.55)) * 20.0 + snoise(vec3(p * 3.2, vSeed + 7.0)) * 3.6;
+    float tC = length(p - nb.xy) * 20.0 + snoise(vec3(p * 6.0, vSeed + 11.0)) * 0.7;
+    // Ableitungen vor jeder Verzweigung bestimmen
+    float dA = fwidth(tA), dB = fwidth(tB), dC = fwidth(tC);
+
+    // Rand aus Strichenden: weich und ausgefranst
+    float fray = snoise(vec3(p * 30.0, vSeed + 1.0)) * 0.03;
+    float shape = 1.0 - smoothstep(-0.03, 0.015, d + fray);
 
     // Sonne wie bei allen Objekten: im Erdschatten dunkler
     float lit = earthShadow(vCenter, uSunDirection);
     float light = mix(0.55, 1.0, lit);
 
     vec3 color = vec3(0.0);
-    if (alpha > 0.0) {
-      // Oben fast weisslich, unten satt (wie im Bild)
+    float alpha = 0.0;
+    if (shape > 0.0) {
       float top = smoothstep(-0.3, 0.32, p.y);
-      color = mix(vColor * 0.9, mix(vColor, vec3(1.0), 0.28), top);
-      // Helle Bögen oben
-      float arcs = bumpArcs(p, 0.045) * uCurls;
-      color = mix(color, mix(vColor, vec3(1.0), 0.5), arcs * 0.55);
-      // Kreidekorn: helle und dunkle Pünktchen
-      color *= 1.0 + grain * 0.07;
+      // Druck wechselt entlang der Striche
+      float pressA = 0.6 + 0.4 * snoise(vec3(p * 6.0, vSeed + 20.0));
+      float pressB = 0.55 + 0.45 * snoise(vec3(p * 5.0, vSeed + 30.0));
+      float a = pencil(tA, dA, 2.0) * pressA;
+      float b = pencil(tB, dB, 1.8) * pressB;
+      // Bogenstriche nur in den Wölbungen oben
+      float inBump = (1.0 - smoothstep(-0.02, 0.06, nb.z)) * smoothstep(-0.2, 0.0, p.y - nb.y);
+      float cArc = pencil(tC, dC, 1.6) * inBump * uCurls * 0.6;
+
+      // Papier zwischen den Strichen: dunkler Grund, leicht in der Farbe getönt
+      vec3 paper = vColor * 0.68;
+      vec3 deep = vColor * 0.88;
+      vec3 bright = mix(vColor, vec3(1.0), 0.22 + 0.25 * top);
+      color = paper;
+      color = mix(color, mix(deep, vColor, top), a);
+      color = mix(color, mix(vColor, bright, top), b * 0.9);
+      color = mix(color, mix(vColor, vec3(1.0), 0.3), cArc);
+      // Dicht gemalt: die Striche decken fast alles, Lücken sind halb durchsichtig
+      float cover = max(max(a, b), cArc);
+      alpha = shape * mix(0.8, 1.0, cover);
     }
     if (vBolt > 0.5) {
       // Blitz zuckt ab und zu auf
@@ -190,7 +220,7 @@ export default function Clouds() {
     "Wolken",
     {
       visible: { value: true, label: "an" },
-      size: { value: 0.16, min: 0.03, max: 0.4, label: "Grösse" },
+      size: { value: 0.3, min: 0.03, max: 0.6, label: "Grösse" },
       altitude: { value: 0.06, min: 0.01, max: 0.3, label: "Höhe" },
       speed: { value: 0.6, min: 0, max: 5, label: "Wind (°/s)" },
       curls: { value: 1, min: 0, max: 1.5, label: "Bogenlinien" },
