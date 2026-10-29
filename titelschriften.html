@@ -11,13 +11,19 @@
       href="https://fonts.googleapis.com/css2?family=Covered+By+Your+Grace&display=swap"
       rel="stylesheet"
     />
-    <!-- Fontshare (Indian Type Foundry): frei, auch kommerziell -->
-    <link
-      href="https://api.fontshare.com/v2/css?f[]=nippo@500,700&f[]=tanker@400&f[]=melodrama@700&f[]=gambarino@400&f[]=telma@700&f[]=bonny@700&f[]=chubbo@700&f[]=boska@700&f[]=zodiak@700&f[]=erode@700&f[]=kola@400&f[]=rowan@700&display=swap"
-      rel="stylesheet"
-    />
-    <!-- Fontsource: Bagnard (Sébastien Sanfilippo, frei) -->
-    <link href="https://cdn.jsdelivr.net/npm/@fontsource/bagnard@5.1.0/index.css" rel="stylesheet" />
+    <!-- Velvetyne (frei, OFL): Vorschau-Dateien in public/preview-fonts, nicht im Repo -->
+    <style>
+      @font-face { font-family: "Basteleur"; src: url("/preview-fonts/basteleur/Basteleur-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+      @font-face { font-family: "Basteleur Moonlight"; src: url("/preview-fonts/basteleur/Basteleur-Moonlight.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+      @font-face { font-family: "Avara"; src: url("/preview-fonts/avara/Avara-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+      @font-face { font-family: "Avara Black"; src: url("/preview-fonts/avara/Avara-Black.woff2") format("woff2"); font-weight: 900; font-display: swap; }
+      @font-face { font-family: "Ouroboros"; src: url("/preview-fonts/ouroboros/Ouroboros-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+      @font-face { font-family: "Compagnon"; src: url("/preview-fonts/compagnon/Compagnon-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+      @font-face { font-family: "Gulax"; src: url("/preview-fonts/gulax/Gulax-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+      @font-face { font-family: "Mourier"; src: url("/preview-fonts/mourier/Mourier-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+      @font-face { font-family: "Kaeru Kaeru"; src: url("/preview-fonts/kaerukaeru/kaerukaeru-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+      @font-face { font-family: "Happy Times"; src: url("/preview-fonts/happy-times/happy-times-NG_bold_master_web.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+    </style>
     <style>
       body {
         margin: 0;
@@ -97,27 +103,23 @@
   <body>
     <header>
       <h1>Titelschriften zur Handschrift</h1>
-      Der Titel liegt hinter der Erde, der Text in Handschrift unten links. Dritte Auswahl: eigenständige freie Schriften
-      von Fontshare und Fontsource, abseits der üblichen Google Fonts.
+      Der Titel liegt hinter der Erde, der Text in Handschrift unten links. Vierte Auswahl: Velvetyne, eine Schriftgiesserei
+      für freie, sehr eigenständige Schriften.
     </header>
     <main class="grid" id="grid"></main>
     <script>
-      // Dritte Auswahl: eigenständige Schriften von Fontshare und Fontsource, abseits der üblichen Google Fonts
+      // Vierte Auswahl: Velvetyne (freie, sehr eigenständige Schriften, OFL)
       const fonts = [
-        ["Nippo", "geometrisch wie Futura, aber mit mehr Eigenheit", "700"],
-        ["Nippo", "dieselbe, Medium", "500"],
-        ["Tanker", "schmal und kräftig, wie mit dem Pinsel gemalt", "400"],
-        ["Melodrama", "schmale Serife, Plakat und Buchtitel", "700"],
-        ["Gambarino", "weiche, verspielte Serife", "400"],
-        ["Bagnard", "kantige Serife mit Handwerk-Charakter", "400"],
-        ["Erode", "warme Serife, ruhig", "700"],
-        ["Zodiak", "kräftige Buchserife", "700"],
-        ["Boska", "Serife mit starken Kontrasten", "700"],
-        ["Telma", "rund und eigenwillig", "700"],
-        ["Bonny", "rund und fett, freundlich", "700"],
-        ["Chubbo", "gedrungen und fröhlich", "700"],
-        ["Kola", "verspielte Plakatschrift", "400"],
-        ["Rowan", "markante Serife", "700"],
+        ["Basteleur", "von Hand geschnittene Serife, leicht unregelmässig (Bold)", "700"],
+        ["Basteleur Moonlight", "dieselbe, feiner und heller", "400"],
+        ["Avara", "kantige Serife mit Ecken und Kerben (Bold)", "700"],
+        ["Avara Black", "dieselbe, schwer", "900"],
+        ["Ouroboros", "verspielt, wie aus einem alten Kinderbuch", "400"],
+        ["Compagnon", "Schreibmaschine mit Charakter (Bold)", "700"],
+        ["Gulax", "eigenwillig, organisch, wie gewachsen", "400"],
+        ["Mourier", "schwungvolle, kontrastreiche Display-Schrift", "400"],
+        ["Kaeru Kaeru", "rund und weich, fröhlich", "400"],
+        ["Happy Times", "klassische Serife mit eigenwilligen Formen (Bold)", "700"],
       ];
       const grid = document.getElementById("grid");
       fonts.forEach(([name, note, weight], i) => {
