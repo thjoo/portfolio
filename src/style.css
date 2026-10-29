@@ -64,8 +64,7 @@ body {
   line-height: 0.68;
   text-transform: uppercase;
   white-space: nowrap;
-  /* Halbtransparent: wo sich Buchstaben überschneiden, wird die Farbe kräftiger (wie Lasur übereinander) */
-  color: color-mix(in srgb, var(--accent) 58%, transparent);
+  color: var(--accent);
   will-change: transform, opacity;
   --scatter: 0;
 }
