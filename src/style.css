@@ -7,7 +7,7 @@
   --font-hand: "Covered By Your Grace", "Comic Sans MS", cursive;
   --font-display: var(--font-hand);
   /* Schwere Titelschrift als Kontrast zur Handschrift */
-  --font-title: "Anton", Impact, "Arial Narrow", sans-serif;
+  --font-title: "Climate Crisis", Impact, "Arial Narrow", sans-serif;
   --font-body: var(--font-hand);
 }
 
@@ -57,9 +57,10 @@ body {
   margin: 0;
   font-family: var(--font-title);
   font-weight: 400;
-  font-size: clamp(4.5rem, 15vw, 15rem);
-  line-height: 0.82;
-  letter-spacing: -0.01em;
+  font-size: clamp(2.6rem, 7vw, 7rem);
+  line-height: 0.9;
+  /* Climate Crisis wird mit den Jahren dünner (1979 dick … 2050 dünn): etwas weniger fett */
+  font-variation-settings: "YEAR" 2018;
   text-transform: uppercase;
   white-space: nowrap;
   color: var(--ink);
@@ -214,7 +215,7 @@ body {
   .page-title {
     left: 16px;
     top: 4vh;
-    font-size: 22vw;
+    font-size: 11vw;
   }
   .page-text {
     left: 16px;
