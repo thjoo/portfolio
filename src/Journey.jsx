@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import { journey, dwell, blend, STAGES, SECTION_VH } from "./journey.js";
+import { journey, dwell, blend, STAGES, SECTION_VH, LOOP_STAGE } from "./journey.js";
 import { latLonToVector } from "./route.js";
 
 const X = new THREE.Vector3(1, 0, 0);
@@ -39,6 +39,12 @@ export default function Journey() {
   useEffect(() => {
     const read = () => {
       const section = (window.innerHeight * SECTION_VH) / 100;
+      // Am Ende der Schleife (gleiche Ansicht wie der Anfang) unbemerkt nach oben springen; der gedämpfte
+      // Stand springt mit, sonst liefe die Reise rückwärts durch alle Stadien
+      if (window.scrollY >= LOOP_STAGE * section - 2) {
+        window.scrollTo(0, window.scrollY - LOOP_STAGE * section);
+        journey.raw -= LOOP_STAGE;
+      }
       journey.target = THREE.MathUtils.clamp(window.scrollY / section, 0, STAGES.length - 1);
     };
     read();
@@ -88,7 +94,7 @@ export default function Journey() {
     const dt = Math.min(delta, 0.05);
     // Scroll weich nachziehen, dann Ruhezonen bei jedem Stadium
     journey.raw += ((journey.target ?? 0) - journey.raw) * (1 - Math.exp(-dt * 2.5));
-    journey.stage = dwell(journey.raw);
+    journey.stage = dwell(Math.max(journey.raw, 0));
     const nearest = Math.round(journey.stage);
     if (Math.abs(journey.stage - nearest) < 0.01 && journey.arrival.index !== nearest) {
       journey.arrival = { index: nearest, count: journey.arrival.count + 1 };

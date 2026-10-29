@@ -146,6 +146,11 @@ export const STAGES = [
   },
 ];
 
+// Endlos-Schleife: nach «Kontakt» führt ein letzter Abschnitt zurück zur Ansicht vom Anfang. Ist er
+// erreicht, springt die Seite unbemerkt nach oben (Journey.jsx), weil beide Ansichten gleich aussehen
+STAGES.push({ ...STAGES[0], id: "loop" });
+export const LOOP_STAGE = STAGES.length - 1;
+
 // Höhe eines Abschnitts in vh: je Stadium so viel Scrollweg (davon ein Teil Ruhe auf demselben Ausschnitt)
 export const SECTION_VH = 170;
 // Anteil des Scrollwegs am Anfang und Ende jedes Abschnitts, auf dem die Ansicht stehen bleibt
