@@ -3,6 +3,10 @@ uniform vec3 uColor;
 uniform vec3 uWashColor;
 uniform float uWash;
 uniform float uVignette;
+uniform float uPaperScale;
+uniform float uPaperFibers;
+uniform float uPaperTooth;
+uniform float uPaperGrain;
 
 #include ./paper.glsl
 
@@ -20,6 +24,9 @@ void main() {
   // Vignette
   float d = length((uv - 0.5) * vec2(uResolution.x / uResolution.y, 1.0));
   color *= 1.0 - smoothstep(0.35, 1.1, d) * uVignette;
+
+  // Papierstruktur (früher im PaperEffect; der Hintergrund liegt jetzt in einer eigenen Ebene hinter dem Titel)
+  color *= 1.0 + paperHeight(p, uPaperScale, uPaperFibers, uPaperTooth, uPaperGrain);
 
   gl_FragColor = vec4(color, 1.0);
   #include <tonemapping_fragment>

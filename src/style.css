@@ -20,17 +20,32 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Die 3D-Bühne steht fest hinter allem */
-.stage {
+/* Ebenen von hinten nach vorne: Hintergrund mit Sternen, Titel, Erde mit Objekten (durchsichtiger Grund),
+   Texte und Leiste */
+.backdrop {
   position: fixed;
   inset: 0;
   z-index: 0;
+  pointer-events: none;
+}
+
+.titles {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.stage {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
 }
 
 /* Scrollweg: unsichtbar, nur damit die Seite scrollt */
 .journey-track {
   position: relative;
-  z-index: 1;
+  z-index: 3;
   pointer-events: none;
 }
 
@@ -39,11 +54,11 @@ body {
 .cards {
   position: fixed;
   inset: 0;
-  z-index: 1;
+  z-index: 3;
   pointer-events: none;
 }
 
-/* Titel: gross, liegt hinter der Erde (die Erdscheibe wird per Maske ausgespart) */
+/* Titel: gross, liegt hinter der Erde (eigene Ebene unter der 3D-Szene) */
 .title-layer {
   position: absolute;
   inset: 0;
@@ -99,12 +114,12 @@ body {
   left: 4vw;
   bottom: 7vh;
   box-sizing: border-box;
-  width: min(24rem, 38vw);
-  max-height: 40vh;
+  width: min(30rem, 40vw);
+  max-height: 48vh;
   overflow: auto;
   margin: 0;
-  font-size: 1.35rem;
-  line-height: 1.35;
+  font-size: 1.2rem;
+  line-height: 1.38;
   color: var(--ink);
   text-shadow: 0 1px 14px rgba(18, 12, 56, 0.65), 0 0 2px rgba(18, 12, 56, 0.4);
   visibility: hidden;
@@ -117,7 +132,7 @@ body {
   position: fixed;
   right: 1.75rem;
   bottom: 1.5rem;
-  z-index: 2;
+  z-index: 4;
   display: flex;
   align-items: center;
   gap: 0.7rem;
@@ -174,7 +189,7 @@ body {
   position: fixed;
   right: 1.25rem;
   top: 50%;
-  z-index: 2;
+  z-index: 4;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;

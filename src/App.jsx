@@ -79,13 +79,6 @@ function Post() {
     objectSharp: { value: 0.85, min: 0, max: 1, label: "Objekte scharf" },
   });
 
-  const bg = useControls("Papier Hintergrund", {
-    scale: { value: 1, min: 0.3, max: 4, label: "Grösse" },
-    fibers: { value: 0.14, min: 0, max: 0.5, label: "Fasern" },
-    tooth: { value: 0.08, min: 0, max: 0.5, label: "Zahn" },
-    grain: { value: 0.05, min: 0, max: 0.3, label: "Korn" },
-  });
-
   const earth = useControls("Papier Erde", {
     follow: { value: true, label: "dreht mit" },
     scale: { value: 1.6, min: 0.3, max: 4, label: "Grösse" },
@@ -101,10 +94,6 @@ function Post() {
     u.get("uSharp").value = sharp.texture;
     u.get("uObjectSharp").value = p.objectSharp;
     u.get("uAspect").value = size.width / size.height;
-    u.get("uBgScale").value = bg.scale;
-    u.get("uBgFibers").value = bg.fibers;
-    u.get("uBgTooth").value = bg.tooth;
-    u.get("uBgGrain").value = bg.grain;
     u.get("uEarthScale").value = earth.scale;
     u.get("uEarthFibers").value = earth.fibers;
     u.get("uEarthTooth").value = earth.tooth;
@@ -153,7 +142,14 @@ export default function App() {
   return (
     <>
       <Leva collapsed />
-      {/* Die Erde steht fest im Hintergrund, die Abschnitte scrollen darüber */}
+      {/* Drei Ebenen: hinten Hintergrund und Sterne, dazwischen der Titel (in Sections), vorne die Erde mit
+          allen Objekten auf durchsichtigem Grund. So liegt der Titel hinter Erde, Wolken und Ballonen */}
+      <div className="backdrop">
+        <Canvas dpr={1} camera={{ position: [0, 0, 3.6], fov: 40 }}>
+          <Background />
+          <Stars />
+        </Canvas>
+      </div>
       <div className="stage">
         <Canvas camera={{ position: [0, 0, 3.6], fov: 40 }} dpr={dpr}>
           <PerformanceMonitor
@@ -163,8 +159,6 @@ export default function App() {
             onFallback={() => setDpr(1)}
           />
           <Journey />
-          <Background />
-          <Stars />
           <Globe />
           <Presence value="clouds">
             <Clouds />

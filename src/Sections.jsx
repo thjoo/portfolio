@@ -39,13 +39,12 @@ export default function Sections() {
   const [active, setActive] = useState(0);
 
   // Jedes Bild: Titel und Text nach dem Stand der Reise bewegen. Der Titel liegt immer hinter der Erde
-  // (Erdscheibe ausgeblendet, wie ein Bild mit Tiefe); ausserhalb seines Stadiums steckt er ganz hinter
+  // (eigene Ebene unter der Erde, wie ein Bild mit Tiefe); ausserhalb seines Stadiums steckt er ganz hinter
   // ihr und schiebt sich beim Ankommen zur Seite hervor. Der Text unten links blendet dazu ein.
   useEffect(() => {
     let frame;
     const tick = () => {
       const { x, y, r } = journey.screen;
-      const mask = `radial-gradient(circle at ${x}px ${y}px, transparent ${r}px, #000 ${r + 1.5}px)`;
       cards.current.forEach((title, i) => {
         const layer = layers.current[i];
         const text = texts.current[i];
@@ -81,8 +80,6 @@ export default function Sections() {
         // Buchstaben purzeln beim Hervorkommen stärker und setzen sich dann
         title.style.setProperty("--scatter", out.toFixed(3));
         title.style.opacity = String(1 - smoothstep(0.6, 1, out));
-        layer.style.maskImage = mask;
-        layer.style.webkitMaskImage = mask;
         // Text: kommt etwas später und von unten
         const t = smoothstep(0.05, 0.35, out);
         text.style.opacity = String(1 - t);
@@ -120,7 +117,8 @@ export default function Sections() {
     <>
       {/* Platzhalter für den Scrollweg: ein Abschnitt pro Stadium, der letzte nur bildschirmhoch */}
       <div className="journey-track" style={{ height: `${(STAGES.length - 1) * SECTION_VH + 100}vh` }} aria-hidden="true" />
-      <div className="cards">
+      {/* Titel liegen zwischen Hintergrund und Erde (siehe Ebenen in App.jsx) */}
+      <div className="titles">
         {CARDS.map((card, i) => (
           <div key={card.stage} className="title-layer" ref={(el) => (layers.current[i] = el)} aria-hidden={active !== i}>
             <h2
@@ -148,6 +146,8 @@ export default function Sections() {
             </h2>
           </div>
         ))}
+      </div>
+      <div className="cards">
         {CARDS.map((card, i) => (
           <p
             key={card.stage}
