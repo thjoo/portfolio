@@ -55,19 +55,14 @@ body {
   max-height: 70vh;
   overflow: auto;
   will-change: transform, opacity;
-  padding: 1.6rem 1.8rem;
-  border: 1px solid var(--panel-border);
-  border-radius: 1.25rem;
-  background: var(--panel);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  /* Kein Kasten: Text direkt auf dem Bild, ein weicher Schatten hält ihn über der Erde lesbar */
+  padding: 0.5rem 0;
+  text-shadow: 0 1px 14px rgba(18, 12, 56, 0.65), 0 0 2px rgba(18, 12, 56, 0.4);
 }
 
 .card-kicker {
-  margin: 0 0 0.5rem;
-  font-size: 0.8rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  margin: 0 0 0.25rem;
+  font-size: 1.05rem;
   color: var(--accent);
 }
 
@@ -75,14 +70,15 @@ body {
   margin: 0 0 0.75rem;
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: clamp(1.8rem, 3.2vw, 2.6rem);
-  line-height: 1.1;
+  font-size: clamp(2.2rem, 4vw, 3.4rem);
+  line-height: 1.05;
 }
 
 .card-text {
   margin: 0;
-  line-height: 1.6;
-  color: var(--ink-soft);
+  font-size: 1.1rem;
+  line-height: 1.55;
+  color: var(--ink);
 }
 
 /* Hinweis am Anfang: Maus-Symbol unten rechts, der Punkt wandert nach unten */

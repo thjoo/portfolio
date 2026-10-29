@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Schriften-Vergleich</title>
+    <!-- Nur zum Vergleichen (wird nicht gebaut). Handschriftliche, unregelmässige Schriften von Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&family=Gaegu:wght@400;700&family=Patrick+Hand&family=Gochi+Hand&family=Kalam:wght@300;400&family=Indie+Flower&family=Shadows+Into+Light&family=Reenie+Beanie&family=Nanum+Pen+Script&family=Covered+By+Your+Grace&family=Schoolbell&family=Sue+Ellen+Francisco&family=Just+Another+Hand&family=Coming+Soon&family=Mynerve&family=Gloria+Hallelujah&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #4a38b0;
+        --ink: #f4f0ff;
+        --soft: rgba(244, 240, 255, 0.7);
+      }
+      body {
+        margin: 0;
+        padding: 3rem 6vw 5rem;
+        background: radial-gradient(circle at 70% 20%, #5d4cc4, var(--bg) 60%, #36288a);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      header {
+        max-width: 46rem;
+        margin-bottom: 3rem;
+        color: var(--soft);
+        line-height: 1.5;
+      }
+      header h1 {
+        margin: 0 0 0.5rem;
+        color: var(--ink);
+        font-size: 1.4rem;
+        font-weight: 600;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+        gap: 3rem 4rem;
+      }
+      .specimen {
+        text-shadow: 0 1px 12px rgba(18, 12, 56, 0.55);
+      }
+      .label {
+        margin: 0 0 0.75rem;
+        font: 600 0.8rem/1 -apple-system, BlinkMacSystemFont, sans-serif;
+        color: var(--soft);
+      }
+      .label span {
+        font-weight: 400;
+      }
+      .kicker {
+        margin: 0;
+        font-size: 1.5rem;
+        color: #a6e6b4;
+      }
+      .title {
+        margin: 0.1rem 0 0.4rem;
+        font-size: 3.4rem;
+        line-height: 1;
+        font-weight: 400;
+      }
+      .text {
+        margin: 0;
+        font-size: 1.45rem;
+        line-height: 1.35;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Schriften-Vergleich</h1>
+      Handschriftliche, unregelmässige Schriften (alle von Google Fonts, frei nutzbar). Jede mit Überschrift,
+      Untertitel und Fliesstext in Grösse wie auf der Seite.
+    </header>
+    <main class="grid" id="grid"></main>
+    <script>
+      const fonts = [
+        ["Caveat", "schnelle Notiz, lebendig, gut lesbar"],
+        ["Gaegu", "wie Farbstift, rund und wackelig"],
+        ["Patrick Hand", "ordentliche Schulschrift"],
+        ["Gochi Hand", "Filzstift, hüpfend"],
+        ["Kalam", "Filzstift, leicht unregelmässig"],
+        ["Indie Flower", "locker und rund"],
+        ["Shadows Into Light", "dünn, schräg, flüchtig"],
+        ["Reenie Beanie", "kratziger Bleistift, sehr unregelmässig"],
+        ["Nanum Pen Script", "Kugelschreiber, schmal und unruhig"],
+        ["Covered By Your Grace", "Marker, ungleichmässig"],
+        ["Schoolbell", "verspielte Schulschrift"],
+        ["Sue Ellen Francisco", "hoch und dünn, Bleistift"],
+        ["Just Another Hand", "schmaler Marker"],
+        ["Coming Soon", "kindlich, rund"],
+        ["Mynerve", "Bleistift, leicht krakelig"],
+        ["Gloria Hallelujah", "comicartig, verspielt"],
+      ];
+      const grid = document.getElementById("grid");
+      fonts.forEach(([name, note], i) => {
+        const el = document.createElement("article");
+        el.className = "specimen";
+        el.style.fontFamily = `"${name}", cursive`;
+        el.innerHTML = `
+          <p class="label">${i + 1}. ${name} <span>– ${note}</span></p>
+          <p class="kicker">Untergymnasium</p>
+          <h2 class="title">1.–2. Klasse</h2>
+          <p class="text">Höhenstufen der Alpen, Flüsse und Gewässer, Klimazonen der Erde. Äpfel, Öl, Übung – 0123456789</p>`;
+        grid.appendChild(el);
+      });
+    </script>
+  </body>
+</html>
