@@ -84,18 +84,21 @@ body {
   color: var(--ink);
 }
 
-/* Hinweis am Anfang: Maus-Symbol unten rechts, der Punkt wandert nach unten */
+/* Hinweis am Anfang unten rechts: zwei kleine Zeilen und ein Pfeil, der nach unten wippt;
+   ab und zu rollen die Buchstaben nacheinander durch (Anregung: Awsmd, „Agency Landing Page“) */
 .scroll-cue {
   position: fixed;
-  right: 1.5rem;
+  right: 1.75rem;
   bottom: 1.5rem;
   z-index: 2;
-  display: grid;
-  place-items: center;
-  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.4rem;
   border: 0;
   background: transparent;
   color: var(--ink-soft);
+  font: inherit;
   cursor: pointer;
 }
 
@@ -106,29 +109,61 @@ body {
 
 .scroll-cue:focus-visible {
   outline: 2px solid var(--ink-soft);
-  outline-offset: 2px;
-  border-radius: 999px;
+  outline-offset: 4px;
 }
 
-.scroll-cue-dot {
-  animation: scroll-cue 1.8s ease-in-out infinite;
+.scroll-cue-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  font-size: 1.05rem;
+  line-height: 1.15;
 }
 
-@keyframes scroll-cue {
-  0% {
+.roll {
+  display: flex;
+}
+
+.roll-letter {
+  display: inline-flex;
+  flex-direction: column;
+  height: 1.15em;
+  overflow: hidden;
+}
+
+.roll-letter > span {
+  display: block;
+  animation: roll 4.5s cubic-bezier(0.6, 0, 0.2, 1) infinite;
+  animation-delay: calc(var(--i) * 35ms);
+}
+
+@keyframes roll {
+  0%,
+  72% {
     transform: translateY(0);
-    opacity: 0;
   }
-  25% {
-    opacity: 1;
+  86% {
+    transform: translateY(-100%);
   }
-  70% {
-    transform: translateY(10px);
-    opacity: 0;
-  }
+  86.01%,
   100% {
-    transform: translateY(10px);
-    opacity: 0;
+    transform: translateY(0);
+  }
+}
+
+.scroll-cue-arrow {
+  animation: cue-arrow 1.9s ease-in-out infinite;
+}
+
+@keyframes cue-arrow {
+  0%,
+  100% {
+    transform: translateY(-3px);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translateY(4px);
+    opacity: 1;
   }
 }
 
@@ -218,7 +253,8 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .scroll-cue-dot {
+  .roll-letter > span,
+  .scroll-cue-arrow {
     animation: none;
   }
   .season-symbol,
