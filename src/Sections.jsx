@@ -4,12 +4,12 @@ import { SECTION_VH, STAGES, journey } from "./journey.js";
 // Texte der Reise, einer pro Stadium (ab Stadium 1; am Anfang nur die Erde). Inhalte folgen später.
 // Jahreszeiten stehen bewusst nicht im Text: sie sollen sich an der Erde selbst zeigen.
 const CARDS = [
-  { stage: 1, kicker: "Untergymnasium", title: "1.–2. Klasse", text: "Themen und Skripte folgen.", accent: "#9fa8ff", symbol: "◐" },
-  { stage: 2, kicker: "Gymnasium", title: "3. Klasse", text: "Themen und Skripte folgen.", accent: "#a6e6b4", symbol: "✿" },
-  { stage: 3, kicker: "Gymnasium", title: "4. Klasse", text: "Themen und Skripte folgen.", accent: "#ffcf8a", symbol: "☀" },
-  { stage: 4, kicker: "Sonderwoche", title: "5. Klasse", text: "Inhalte zur Sonderwoche folgen.", accent: "#f0a56a", symbol: "❦" },
-  { stage: 5, kicker: "Gymnasium", title: "6. Klasse", text: "Themen und Skripte folgen.", accent: "#cfe2ff", symbol: "❄" },
-  { stage: 6, kicker: "Über mich", title: "Kontakt", text: "Text über mich und Kontaktangaben folgen.", accent: "#9fa8ff", symbol: "✉" },
+  { stage: 1, title: "1.–2. Klasse", text: "Themen und Skripte folgen.", accent: "#9fa8ff", symbol: "◐" },
+  { stage: 2, title: "3. Klasse", text: "Themen und Skripte folgen.", accent: "#a6e6b4", symbol: "✿" },
+  { stage: 3, title: "4. Klasse", text: "Themen und Skripte folgen.", accent: "#ffcf8a", symbol: "☀" },
+  { stage: 4, title: "5. Klasse", text: "Inhalte zur Sonderwoche folgen.", accent: "#f0a56a", symbol: "❦" },
+  { stage: 5, title: "6. Klasse", text: "Themen und Skripte folgen.", accent: "#cfe2ff", symbol: "❄" },
+  { stage: 6, title: "Kontakt", text: "Text über mich und Kontaktangaben folgen.", accent: "#9fa8ff", symbol: "✉" },
 ];
 
 const smoothstep = (a, b, x) => {
@@ -26,37 +26,43 @@ export default function Sections() {
   const cards = useRef([]);
   const nav = useRef();
   const cue = useRef();
+  const texts = useRef([]);
   const [active, setActive] = useState(0);
 
-  // Jedes Bild: Karten nach dem Stand der Reise bewegen. Ausserhalb ihres Stadiums liegt eine Karte
-  // hinter der Erde (dort ausgeblendet); kommt man an, schiebt sie sich zur Seite hervor.
+  // Jedes Bild: Titel und Text nach dem Stand der Reise bewegen. Der Titel liegt immer hinter der Erde
+  // (Erdscheibe ausgeblendet, wie ein Bild mit Tiefe); ausserhalb seines Stadiums steckt er ganz hinter
+  // ihr und schiebt sich beim Ankommen zur Seite hervor. Der Text unten links blendet dazu ein.
   useEffect(() => {
     let frame;
     const tick = () => {
       const { x, y, r } = journey.screen;
-      cards.current.forEach((card, i) => {
+      const mask = `radial-gradient(circle at ${x}px ${y}px, transparent ${r}px, #000 ${r + 1.5}px)`;
+      cards.current.forEach((title, i) => {
         const layer = layers.current[i];
-        if (!card || !layer) return;
+        const text = texts.current[i];
+        if (!title || !layer || !text) return;
         const d = Math.abs(journey.stage - CARDS[i].stage);
-        const out = smoothstep(0.08, 0.5, d); // 0 = an ihrem Platz, 1 = hinter der Erde
+        const out = smoothstep(0.08, 0.5, d); // 0 = an seinem Platz, 1 = hinter der Erde
         const visible = out < 0.999;
         layer.style.visibility = visible ? "visible" : "hidden";
+        text.style.visibility = visible ? "visible" : "hidden";
         if (!visible) return;
-        // Weg vom Platz der Karte zur Erdmitte
-        const box = card.getBoundingClientRect();
-        const cx = box.left - (parseFloat(card.dataset.tx) || 0) + box.width / 2;
-        const cy = box.top - (parseFloat(card.dataset.ty) || 0) + box.height / 2;
+        // Weg vom Platz des Titels zur Erdmitte
+        const box = title.getBoundingClientRect();
+        const cx = box.left - (parseFloat(title.dataset.tx) || 0) + box.width / 2;
+        const cy = box.top - (parseFloat(title.dataset.ty) || 0) + box.height / 2;
         const tx = (x - cx) * out;
         const ty = (y - cy) * out;
-        card.dataset.tx = tx;
-        card.dataset.ty = ty;
-        card.style.transform = `translate(${tx}px, ${ty}px) scale(${1 - 0.25 * out})`;
-        card.style.opacity = String(1 - smoothstep(0.6, 1, out));
-        // Teil der Karte hinter der Erdscheibe verdecken; ist die Karte ganz draussen, gibt die Erde sie frei
-        const radius = r * smoothstep(0, 0.35, out);
-        const mask = `radial-gradient(circle at ${x}px ${y}px, transparent ${radius}px, #000 ${radius + 1.5}px)`;
+        title.dataset.tx = tx;
+        title.dataset.ty = ty;
+        title.style.transform = `translate(${tx}px, ${ty}px) scale(${1 - 0.3 * out})`;
+        title.style.opacity = String(1 - smoothstep(0.6, 1, out));
         layer.style.maskImage = mask;
         layer.style.webkitMaskImage = mask;
+        // Text: kommt etwas später und von unten
+        const t = smoothstep(0.05, 0.35, out);
+        text.style.opacity = String(1 - t);
+        text.style.transform = `translateY(${t * 24}px)`;
       });
       // Leiste erst einblenden, wenn die Reise beginnt
       if (nav.current) nav.current.style.opacity = String(smoothstep(0.15, 0.6, journey.stage));
@@ -92,18 +98,22 @@ export default function Sections() {
       <div className="journey-track" style={{ height: `${(STAGES.length - 1) * SECTION_VH + 100}vh` }} aria-hidden="true" />
       <div className="cards">
         {CARDS.map((card, i) => (
-          <div key={card.stage} className="card-layer" ref={(el) => (layers.current[i] = el)}>
-            <article
-              className="card"
-              ref={(el) => (cards.current[i] = el)}
-              style={{ "--accent": card.accent }}
-              aria-hidden={active !== i}
-            >
-              <p className="card-kicker">{card.kicker}</p>
-              <h2 className="card-title">{card.title}</h2>
-              <p className="card-text">{card.text}</p>
-            </article>
+          <div key={card.stage} className="title-layer" ref={(el) => (layers.current[i] = el)} aria-hidden={active !== i}>
+            <h2 className="page-title" ref={(el) => (cards.current[i] = el)}>
+              {card.title}
+            </h2>
           </div>
+        ))}
+        {CARDS.map((card, i) => (
+          <p
+            key={card.stage}
+            className="page-text"
+            ref={(el) => (texts.current[i] = el)}
+            style={{ "--accent": card.accent }}
+            aria-hidden={active !== i}
+          >
+            {card.text}
+          </p>
         ))}
       </div>
       <button type="button" className="scroll-cue" ref={cue} onClick={() => go(1)} aria-label="Nach unten scrollen">

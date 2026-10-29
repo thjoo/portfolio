@@ -6,6 +6,8 @@
   /* Handschrift für alle Texte; später die eigene Schrift hier eintragen */
   --font-hand: "Covered By Your Grace", "Comic Sans MS", cursive;
   --font-display: var(--font-hand);
+  /* Schwere Titelschrift als Kontrast zur Handschrift */
+  --font-title: "Anton", Impact, "Arial Narrow", sans-serif;
   --font-body: var(--font-hand);
 }
 
@@ -41,47 +43,46 @@ body {
   pointer-events: none;
 }
 
-.card-layer {
+/* Titel: gross, liegt hinter der Erde (die Erdscheibe wird per Maske ausgespart) */
+.title-layer {
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: center;
-  padding: 0 6vw;
   visibility: hidden;
 }
 
-.card {
-  pointer-events: auto;
-  box-sizing: border-box;
-  width: min(26rem, 40vw);
-  max-height: 70vh;
-  overflow: auto;
-  will-change: transform, opacity;
-  /* Kein Kasten: Text direkt auf dem Bild, ein weicher Schatten hält ihn über der Erde lesbar */
-  padding: 0.5rem 0;
-  text-shadow: 0 1px 14px rgba(18, 12, 56, 0.65), 0 0 2px rgba(18, 12, 56, 0.4);
-}
-
-.card-kicker {
+.page-title {
+  position: absolute;
+  left: 4vw;
+  top: 6vh;
   margin: 0;
-  font-size: 1.4rem;
-  line-height: 1.1;
-  color: var(--accent);
-}
-
-.card-title {
-  margin: 0 0 0.75rem;
-  font-family: var(--font-display);
+  font-family: var(--font-title);
   font-weight: 400;
-  font-size: clamp(2.6rem, 4.6vw, 4rem);
-  line-height: 1;
+  font-size: clamp(4.5rem, 15vw, 15rem);
+  line-height: 0.82;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ink);
+  will-change: transform, opacity;
 }
 
-.card-text {
+/* Text in Handschrift unten links, vor der Erde */
+.page-text {
+  pointer-events: auto;
+  position: absolute;
+  left: 4vw;
+  bottom: 7vh;
+  box-sizing: border-box;
+  width: min(24rem, 38vw);
+  max-height: 40vh;
+  overflow: auto;
   margin: 0;
   font-size: 1.35rem;
   line-height: 1.35;
   color: var(--ink);
+  text-shadow: 0 1px 14px rgba(18, 12, 56, 0.65), 0 0 2px rgba(18, 12, 56, 0.4);
+  visibility: hidden;
+  will-change: transform, opacity;
 }
 
 /* Hinweis am Anfang unten rechts: zwei kleine Zeilen und ein Pfeil, zurückhaltend; das Ganze wippt
@@ -210,14 +211,17 @@ body {
 
 /* Schmal: Text unten, Erde oben (die Kamera schiebt sie hoch) */
 @media (max-width: 760px) {
-  .card-layer {
-    align-items: flex-end;
-    padding: 0 16px 6vh;
+  .page-title {
+    left: 16px;
+    top: 4vh;
+    font-size: 22vw;
   }
-  .card {
-    width: 100%;
-    max-height: 45vh;
-    padding: 1.25rem 1.35rem;
+  .page-text {
+    left: 16px;
+    right: 16px;
+    bottom: 5vh;
+    width: auto;
+    max-height: 30vh;
   }
   .seasons {
     right: 8px;
