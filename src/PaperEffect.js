@@ -83,10 +83,9 @@ const fragmentShader = /* glsl */ `
       // Nur Pixel auf der Kugeloberfläche sind Erde; Objekte davor (Ballon …) bekommen kein Eis
       onGlobe = step(abs(length(localRaw) - 1.0), 0.0012);
 
+      // Schatten der Eis-Knäuel nur auf der Oberfläche (nicht auf Objekten wie den Eisschalen selbst)
+      if (onGlobe > 0.5) {
       // Gekritzel im Eis. UV wie bei SphereGeometry: u = atan(z, -x) / 2pi, v = 1 - acos(y) / pi
-      vec2 sphereUv = vec2(atan(local.z, -local.x) / 6.28318530718, 1.0 - acos(clamp(local.y, -1.0, 1.0)) / 3.14159265359);
-      sphereUv.x = fract(sphereUv.x);
-      vec4 landTexel = texture2D(uLand, sphereUv);
 
       // Eis = gekritzeltes Knäuel über jedem Pol. Grösse je nach Jahreszeit (0 Sommer, 1 Winter)
       float pole = local.y > 0.0 ? 1.0 : -1.0;
@@ -95,34 +94,21 @@ const fragmentShader = /* glsl */ `
       vec3 sunLocal = normalize(mat3(uGlobeInverse) * normalize(uSunDirection));
       vec2 sunQ = vec2(sunLocal.x, sunLocal.z * pole);
       vec2 shadowDir = sunQ / max(length(sunQ), 1e-3) * clamp(length(sunQ) * 3.0, 0.0, 1.0);
-      float shadowPressure;
-      float pressure = scribbleBall(local, pole, radiusDeg, 42.0 * uScribbleDensity, uScribbleWidth, uIceIrregular,
-                                    shadowDir, uIceThickness, shadowPressure);
-      // Kreide-Zahn nur dort rechnen, wo überhaupt Kreide liegt (spart drei Rauschwerte pro Erdpixel)
-      float tooth = pressure + shadowPressure > 0.0 ? crayonTooth(local, uEarthScale * 0.7) : 0.0;
+      // Das Knäuel selbst zeichnen die schwebenden Schalen (IceCaps.jsx); hier nur sein Schatten auf der
+      // Oberfläche, weit versetzt, weil das Eis darüber schwebt
+      float shadowPressure = scribbleShadow(local, pole, radiusDeg, 42.0 * uScribbleDensity, uScribbleWidth,
+                                            uIceIrregular, shadowDir, uIceThickness * 3.0);
+      // Kreide-Zahn nur dort rechnen, wo überhaupt Schatten liegt (spart drei Rauschwerte pro Erdpixel)
+      float tooth = shadowPressure > 0.0 ? crayonTooth(local, uEarthScale * 0.7) : 0.0;
       float sun = dot(normalize(world.xyz), normalize(uSunDirection));
       // Wie die Erde: auf der Nachtseite dunkel und kühl, im Tag hell
       float day = smoothstep(-0.15, 0.2, sun);
       float light = mix(0.34, 1.08, day);
-      // Über Landeis etwas weniger Druck, damit die Antarktis durchscheint
-      float landIce = smoothstep(0.3, 0.7, landTexel.r) * step(0.97, landTexel.a);
-      pressure *= mix(1.0, 0.92, landIce);
-      float scribble = crayonDeposit(pressure, tooth) * uScribble * onGlobe;
       float shadowCover = crayonDeposit(shadowPressure, tooth * 0.3) * uScribble * onGlobe;
 
       // Schlagschatten auf dem Untergrund: weich, dunkler und violett getönt
-      float castShadow = shadowCover * (1.0 - scribble);
-      color = mix(color, color * vec3(0.5, 0.45, 0.78), castShadow * 0.65 * (0.5 + 0.5 * light));
-
-      // Relief der Kreide am weichen Druckverlauf (nicht am Korn): Kanten zur Sonne glänzen,
-      // abgewandte fallen dunkel ab -> die Schicht wirkt aufgetragen und dick
-      vec2 sunScreen = (uViewMatrix * vec4(normalize(uSunDirection), 0.0)).xy;
-      sunScreen /= max(length(sunScreen), 1e-3);
-      float height = smoothstep(0.05, 0.75, pressure);
-      vec2 grad = vec2(dFdx(height), dFdy(height)) * uScribbleWidth;
-      float relief = clamp(-dot(grad, sunScreen) * 1.2, -1.0, 1.0) * clamp(uIceThickness / 5.0, 0.0, 2.0);
-      vec3 iceColor = uIceColor * light * mix(vec3(0.82, 0.8, 1.0), vec3(1.0), day) * (1.0 + relief * 0.4 * (0.3 + 0.7 * day));
-      color = mix(color, iceColor, clamp(scribble, 0.0, 1.0));
+      color = mix(color, color * vec3(0.5, 0.45, 0.78), shadowCover * 0.55 * (0.5 + 0.5 * light));
+      }
     }
 
     // Jeder Pixel ist entweder Hintergrund oder Erde: nur das passende Papier rechnen

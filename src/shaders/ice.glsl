@@ -77,6 +77,37 @@ float scribbleBall(vec3 p, float pole, float radiusDeg, float loops, float width
   return 1.0 - uncovered;
 }
 
+// Nur der Schatten des Knäuels: dieselben Schlaufen, zur Sonne versetzt (für den Papier-Pass;
+// das Knäuel selbst zeichnen die schwebenden Eisschalen). Halb so teuer wie scribbleBall mit Schatten.
+float scribbleShadow(vec3 p, float pole, float radiusDeg, float loops, float widthPx, float messiness,
+                     vec2 shadowDir, float shadowPx) {
+  float h = p.y * pole;
+  vec2 q = vec2(p.x, p.z * pole) / (1.0 + max(h, 0.0));
+  float pixel = max(length(fwidth(q)) * 0.7071, 1e-6);
+  float radius = tan(radians(radiusDeg) * 0.5);
+  vec2 qShadow = q + shadowDir * shadowPx * pixel;
+  if (h < 0.0 || length(qShadow) > radius * 1.6) return 0.0;
+  float uncovered = 1.0;
+  float seed = pole > 0.0 ? 11.0 : 47.0;
+  for (int i = 0; i < 96; i++) {
+    float fi = float(i);
+    if (fi >= loops) break;
+    float k = seed + fi * 7.13;
+    float spreadRadius = pow(scribbleHash(k), 1.6) * radius * 0.6 * messiness;
+    float spreadAngle = scribbleHash(k + 1.3) * 6.28318;
+    vec2 center = vec2(cos(spreadAngle), sin(spreadAngle)) * spreadRadius;
+    float a = radius * (0.12 + 0.88 * pow(scribbleHash(k + 2.1), 1.2));
+    vec2 axes = vec2(a, a * (0.55 + 0.45 * scribbleHash(k + 3.7)));
+    float angle = scribbleHash(k + 4.9) * 3.14159;
+    vec2 rot = vec2(cos(angle), sin(angle));
+    float halfWidth = widthPx * (0.75 + 0.5 * scribbleHash(k + 6.1));
+    float arcStart = scribbleHash(k + 8.3) * 6.28318;
+    float arcLength = 3.5 + scribbleHash(k + 9.1) * 3.5;
+    uncovered *= 1.0 - loopStroke(qShadow, center, axes, rot, k, halfWidth, pixel, arcStart, arcLength) * 0.62;
+  }
+  return 1.0 - uncovered;
+}
+
 // Papierzahn für Wachskreide: organische Körnung auf der Kugel, ohne Raster.
 // Liefert eine Höhe um 0 (negativ = Tal).
 float crayonTooth(vec3 p, float scale) {

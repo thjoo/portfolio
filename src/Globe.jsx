@@ -4,6 +4,7 @@ import { useControls, folder } from "leva";
 import * as THREE from "three";
 import { createLandTexture } from "./landTexture.js";
 import { blend, blendColor } from "./journey.js";
+import IceCaps from "./IceCaps.jsx";
 import vertexShader from "./shaders/globe.vert?raw";
 import fragmentSource from "./shaders/globe.frag?raw";
 import noise from "./shaders/noise.glsl?raw";
@@ -137,6 +138,8 @@ export default function Globe() {
         fragmentShader={fragmentShader}
         uniforms={uniforms}
       />
+      {/* Eis-Knäuel schweben als eigene Schalen über den Polen und drehen mit der Erde */}
+      <IceCaps />
     </mesh>
   );
 }
