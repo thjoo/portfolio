@@ -50,7 +50,10 @@ const vertexShader = /* glsl */ `
     gl_Position = projectionMatrix * viewMatrix * vec4(world, 1.0);
     // Ganze Wolke mit der Tiefe ihres Mittelpunkts zeichnen: wie ein aufgeklebtes Bild, das nicht
     // in die Kugel schneidet
-    vec4 clipCenter = projectionMatrix * viewMatrix * center;
+    // Tiefe etwas zur Kamera hin versetzt: zum Rand hin wölbt sich die Kugel vor den Mittelpunkt
+    // (z. B. im Norden), sonst würde sie die Unterkante doch abschneiden
+    vec3 biased = center.xyz + normalize(cameraPosition - center.xyz) * size * 1.3;
+    vec4 clipCenter = projectionMatrix * viewMatrix * vec4(biased, 1.0);
     gl_Position.z = (clipCenter.z / clipCenter.w) * gl_Position.w;
     // Hinter dem Erdrand weich ausblenden (Sichtlinie Kamera -> Mittelpunkt streift die Kugel)
     vec3 toCenter = center.xyz - cameraPosition;
