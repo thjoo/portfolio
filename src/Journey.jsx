@@ -105,7 +105,10 @@ export default function Journey() {
     const lat = THREE.MathUtils.lerp(a.view[0], b.view[0], f);
     const lon = lerpAngle(a.view[1], b.view[1], f);
     latLonToVector(0, lon, point);
-    yaw.setFromAxisAngle(Y, -Math.atan2(point.x, point.z) + d.yaw + d.spin);
+    // Auch in den Ruhezonen dreht die Erde beim Scrollen mit: Abstand zwischen Scrollweg und Stadium.
+    // Er ist bei jedem Stadium genau 0 und wächst sonst stetig mit dem Scrollen -> die Erde dreht immer vorwärts
+    const scrollSpin = (journey.raw - journey.stage) * 1.6;
+    yaw.setFromAxisAngle(Y, -Math.atan2(point.x, point.z) + d.yaw + d.spin + scrollSpin);
     tilt.setFromAxisAngle(X, THREE.MathUtils.degToRad(lat) + d.pitch);
     const globe = scene.getObjectByName("globe");
     if (globe) globe.quaternion.copy(tilt).multiply(yaw);
