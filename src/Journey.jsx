@@ -11,10 +11,20 @@ const yaw = new THREE.Quaternion();
 const point = new THREE.Vector3();
 const center = new THREE.Vector3();
 
-// Kürzester Weg zwischen zwei Winkeln (Grad)
-function lerpAngle(a, b, f) {
-  const d = ((((b - a) % 360) + 540) % 360) - 180;
-  return a + d * f;
+// Mindestens so viel dreht die Erde von Stadium zu Stadium (Grad). Grösser als das Mitdrehen beim Scrollen
+// (SCROLL_SPIN), damit sich die Erde auch im Übergang nie rückwärts bewegt
+const MIN_STEP = 35;
+const SCROLL_SPIN = THREE.MathUtils.degToRad(28);
+
+// Längen der Stadien als durchgehender Weg nach Westen: jedes Stadium MIN_STEP … MIN_STEP + 360° weiter
+function forwardPath(start) {
+  const path = [start];
+  for (let i = 1; i < STAGES.length; i++) {
+    const previous = path[i - 1];
+    const step = MIN_STEP + THREE.MathUtils.euclideanModulo(previous - MIN_STEP - STAGES[i].view[1], 360);
+    path.push(previous - step);
+  }
+  return path;
 }
 
 // Steuert die Reise: Scroll-Position -> Stadium, Erde zum Ort drehen, Kamera-Abstand und Verschiebung.
@@ -96,19 +106,28 @@ export default function Journey() {
       const spring = (1 - free) * 2.2;
       d.yaw -= d.yaw * Math.min(spring * dt, 1);
       d.pitch -= d.pitch * Math.min((spring + free * 0.6) * dt, 1);
-      // Im freien Teil dreht sich die Erde ganz langsam von selbst
-      d.spin += dt * 0.03 * free;
+      // Im freien Teil dreht sich die Erde ganz langsam von selbst (nach Westen, wie beim Scrollen).
+      // Wird nie zurückgedreht: der Weg zu den Stadien startet einfach dort, wo die Erde gerade steht
+      d.spin += dt * 1.2 * free;
     }
-    if (free < 0.01) d.spin -= d.spin * Math.min(2 * dt, 1);
+    // Im freien Teil bleibt die Erde stehen, wo man sie hingedreht hat: Ziehen geht in den Weg ein,
+    // statt zurückzufedern (sonst drehte sie beim Weiterscrollen rückwärts)
+    if (free > 0.5) {
+      d.spin += THREE.MathUtils.radToDeg(d.yaw);
+      d.yaw = 0;
+    }
 
     // Ort zur Kamera drehen: erst um die Erdachse (Länge), dann kippen (Breite)
     const lat = THREE.MathUtils.lerp(a.view[0], b.view[0], f);
-    const lon = lerpAngle(a.view[1], b.view[1], f);
+    const path = forwardPath(STAGES[0].view[1] - d.spin);
+    const i = STAGES.indexOf(a);
+    const lon = THREE.MathUtils.lerp(path[i], path[i + 1], f);
     latLonToVector(0, lon, point);
-    // Auch in den Ruhezonen dreht die Erde beim Scrollen mit: Abstand zwischen Scrollweg und Stadium.
-    // Er ist bei jedem Stadium genau 0 und wächst sonst stetig mit dem Scrollen -> die Erde dreht immer vorwärts
-    const scrollSpin = (journey.raw - journey.stage) * 1.6;
-    yaw.setFromAxisAngle(Y, -Math.atan2(point.x, point.z) + d.yaw + d.spin + scrollSpin);
+    // Auch in den Ruhezonen dreht die Erde beim Scrollen mit: Abstand zwischen Scrollweg und Stadium
+    // (bei jedem Stadium genau 0). Im Übergang nimmt er wieder ab, der Weg zum nächsten Ort ist aber
+    // länger (MIN_STEP) -> insgesamt dreht die Erde immer vorwärts
+    const scrollSpin = (journey.raw - journey.stage) * SCROLL_SPIN;
+    yaw.setFromAxisAngle(Y, -Math.atan2(point.x, point.z) + d.yaw + scrollSpin);
     tilt.setFromAxisAngle(X, THREE.MathUtils.degToRad(lat) + d.pitch);
     const globe = scene.getObjectByName("globe");
     if (globe) globe.quaternion.copy(tilt).multiply(yaw);

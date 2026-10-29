@@ -4,7 +4,8 @@ import * as THREE from "three";
 // Die Reise durch das Schuljahr: ein Stadium pro Abschnitt der Seite. Beim Scrollen wird zwischen den
 // Stadien weich übergeblendet (Ansicht, Zoom, Farben, Eis, Sonne, sichtbare Objekte).
 //
-// view: Ort, der zur Kamera zeigt [Breite, Länge]; zoom: Abstand im Verhältnis zur ganzen Erde (1 = passt
+// view: Ort, der zur Kamera zeigt [Breite, Länge]. Die Erde dreht beim Scrollen nur vorwärts (West -> Ost wie
+// in echt): jedes Stadium liegt mindestens 35° weiter westlich als das vorige, notfalls eine Runde mehr; zoom: Abstand im Verhältnis zur ganzen Erde (1 = passt
 // ganz ins Bild); shift: Erde seitlich verschieben, damit links Platz für den Text bleibt (Anteil Breite);
 // palette: Farben der Erde und des Hintergrunds (null = Grundfarben aus den Reglern);
 // ice: [Arktis, Antarktis] 0 Sommer … 1 Winter; sun: [Winkel (°), Höhe] der Sonne;
@@ -66,7 +67,7 @@ const WINTER = {
 export const STAGES = [
   {
     id: "intro",
-    view: [22, -38],
+    view: [22, -10],
     zoom: 1,
     shift: 0,
     palette: null,
@@ -78,7 +79,7 @@ export const STAGES = [
   {
     // Wie der Anfang, aber die Erde rückt zur Seite und der Text kommt hinter ihr hervor
     id: "untergymnasium",
-    view: [22, -30],
+    view: [22, -48],
     zoom: 0.92,
     shift: 0.2,
     palette: null,
@@ -89,7 +90,7 @@ export const STAGES = [
   },
   {
     id: "spring",
-    view: [26, -76],
+    view: [26, -84],
     zoom: 0.62,
     shift: 0.2,
     palette: SPRING,
@@ -111,7 +112,7 @@ export const STAGES = [
   },
   {
     id: "autumn",
-    view: [28, -32],
+    view: [28, -30],
     zoom: 0.95,
     shift: 0.2,
     palette: AUTUMN,
@@ -122,7 +123,7 @@ export const STAGES = [
   },
   {
     id: "winter",
-    view: [-42, -30],
+    view: [-42, -66],
     zoom: 0.66,
     shift: 0.2,
     palette: WINTER,
@@ -133,7 +134,7 @@ export const STAGES = [
   },
   {
     id: "about",
-    view: [18, -20],
+    view: [18, -104],
     zoom: 1.15,
     shift: 0.16,
     palette: null,
