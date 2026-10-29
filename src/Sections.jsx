@@ -25,6 +25,7 @@ export default function Sections() {
   const layers = useRef([]);
   const cards = useRef([]);
   const nav = useRef();
+  const cue = useRef();
   const [active, setActive] = useState(0);
 
   // Jedes Bild: Karten nach dem Stand der Reise bewegen. Ausserhalb ihres Stadiums liegt eine Karte
@@ -59,6 +60,13 @@ export default function Sections() {
       });
       // Leiste erst einblenden, wenn die Reise beginnt
       if (nav.current) nav.current.style.opacity = String(smoothstep(0.15, 0.6, journey.stage));
+      // Hinweis zum Scrollen nur am Anfang
+      if (cue.current) {
+        // nach dem tatsächlichen Scrollweg (nicht nach dem Stadium, das am Anfang eine Weile ruht)
+        const show = 1 - smoothstep(0.02, 0.15, journey.raw);
+        cue.current.style.opacity = String(show);
+        cue.current.style.visibility = show > 0.01 ? "visible" : "hidden";
+      }
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
@@ -98,6 +106,12 @@ export default function Sections() {
           </div>
         ))}
       </div>
+      <button type="button" className="scroll-cue" ref={cue} onClick={() => go(1)} aria-label="Nach unten scrollen">
+        <svg viewBox="0 0 24 36" width="22" height="33" aria-hidden="true">
+          <rect x="1.5" y="1.5" width="21" height="33" rx="10.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+          <circle className="scroll-cue-dot" cx="12" cy="10" r="2.4" fill="currentColor" />
+        </svg>
+      </button>
       <nav className="seasons" aria-label="Stadien" ref={nav}>
         {CARDS.map((card, i) => (
           <button
