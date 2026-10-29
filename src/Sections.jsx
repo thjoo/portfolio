@@ -120,7 +120,11 @@ export default function Sections() {
                   {[...line].map((letter, k) => {
                     const n = card.stage * 31 + l * 7 + k;
                     return (
-                      <span key={k} className="page-title-letter" style={{ "--r": tilt(n), "--y": lift(n) }}>
+                      <span
+                        key={k}
+                        className={`page-title-letter${letter === "." ? " is-dot" : ""}`}
+                        style={{ "--r": tilt(n), "--y": lift(n) }}
+                      >
                         {letter}
                       </span>
                     );

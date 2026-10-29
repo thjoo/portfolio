@@ -61,22 +61,33 @@ body {
   font-weight: 900;
   font-variation-settings: "wdth" 112;
   font-size: clamp(6rem, 40vh, 26rem);
-  line-height: 0.76;
+  line-height: 0.68;
   text-transform: uppercase;
   white-space: nowrap;
-  color: var(--accent);
+  /* Halbtransparent: wo sich Buchstaben überschneiden, wird die Farbe kräftiger (wie Lasur übereinander) */
+  color: color-mix(in srgb, var(--accent) 58%, transparent);
   will-change: transform, opacity;
   --scatter: 0;
 }
 
 .page-title-line {
   display: flex;
+  align-items: baseline;
+}
+
+/* Punkt kleiner, damit er die Buchstaben nicht auseinanderdrückt */
+.page-title-letter.is-dot {
+  font-size: 0.5em;
+  margin: 0 0.3em 0 0.04em;
+  /* etwas angehoben: sonst verschmilzt er mit der zweiten Zeile, die eng darunter liegt */
+  position: relative;
+  top: -0.45em;
 }
 
 /* Jeder Buchstabe leicht gekippt und versetzt, eng ineinander geschoben */
 .page-title-letter {
   display: inline-block;
-  margin-right: -0.07em;
+  margin-right: -0.13em;
   transform: translateY(calc(var(--y) * 1em * (1 + var(--scatter) * 3)))
     rotate(calc(var(--r) * 1deg * (1 + var(--scatter) * 2)));
 }
