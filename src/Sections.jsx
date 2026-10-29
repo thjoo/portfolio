@@ -1,120 +1,118 @@
-import { useEffect, useState } from "react";
-import { SECTION_VH } from "./journey.js";
+import { useEffect, useRef, useState } from "react";
+import { SECTION_VH, STAGES, journey } from "./journey.js";
 
-// Abschnitte der Reise, einer pro Stadium. Inhalte (Themen, Skripte) folgen später.
-const SECTIONS = [
-  {
-    id: "untergymnasium",
-    season: "Ruhe",
-    kicker: "1.–2. Klasse · Untergymnasium",
-    title: "Die Erde kennenlernen",
-    text: "Themen und Skripte des Untergymnasiums folgen.",
-    accent: "#9fa8ff",
-    symbol: "◐",
-  },
-  {
-    id: "fruehling",
-    season: "Frühling",
-    kicker: "3. Klasse",
-    title: "Frühling",
-    text: "Themen und Skripte der 3. Klasse folgen.",
-    accent: "#a6e6b4",
-    symbol: "✿",
-  },
-  {
-    id: "sommer",
-    season: "Sommer",
-    kicker: "4. Klasse",
-    title: "Sommer",
-    text: "Themen und Skripte der 4. Klasse folgen.",
-    accent: "#ffcf8a",
-    symbol: "☀",
-  },
-  {
-    id: "herbst",
-    season: "Herbst",
-    kicker: "5. Klasse · Sonderwoche",
-    title: "Herbst",
-    text: "Inhalte zur Sonderwoche folgen.",
-    accent: "#f0a56a",
-    symbol: "❦",
-  },
-  {
-    id: "winter",
-    season: "Winter",
-    kicker: "6. Klasse",
-    title: "Winter",
-    text: "Themen und Skripte der 6. Klasse folgen.",
-    accent: "#cfe2ff",
-    symbol: "❄",
-  },
-  {
-    id: "ueber-mich",
-    season: "Über mich",
-    kicker: "Über mich",
-    title: "Kontakt",
-    text: "Text über mich und Kontaktangaben folgen.",
-    accent: "#9fa8ff",
-    symbol: "✉",
-  },
+// Texte der Reise, einer pro Stadium (ab Stadium 1; am Anfang nur die Erde). Inhalte folgen später.
+// Jahreszeiten stehen bewusst nicht im Text: sie sollen sich an der Erde selbst zeigen.
+const CARDS = [
+  { stage: 1, kicker: "Untergymnasium", title: "1.–2. Klasse", text: "Themen und Skripte folgen.", accent: "#9fa8ff", symbol: "◐" },
+  { stage: 2, kicker: "Gymnasium", title: "3. Klasse", text: "Themen und Skripte folgen.", accent: "#a6e6b4", symbol: "✿" },
+  { stage: 3, kicker: "Gymnasium", title: "4. Klasse", text: "Themen und Skripte folgen.", accent: "#ffcf8a", symbol: "☀" },
+  { stage: 4, kicker: "Sonderwoche", title: "5. Klasse", text: "Inhalte zur Sonderwoche folgen.", accent: "#f0a56a", symbol: "❦" },
+  { stage: 5, kicker: "Gymnasium", title: "6. Klasse", text: "Themen und Skripte folgen.", accent: "#cfe2ff", symbol: "❄" },
+  { stage: 6, kicker: "Über mich", title: "Kontakt", text: "Text über mich und Kontaktangaben folgen.", accent: "#9fa8ff", symbol: "✉" },
 ];
+
+const smoothstep = (a, b, x) => {
+  const t = Math.min(Math.max((x - a) / (b - a), 0), 1);
+  return t * t * (3 - 2 * t);
+};
 
 function sectionHeight() {
   return (window.innerHeight * SECTION_VH) / 100;
 }
 
 export default function Sections() {
+  const layers = useRef([]);
+  const cards = useRef([]);
+  const nav = useRef();
   const [active, setActive] = useState(0);
 
+  // Jedes Bild: Karten nach dem Stand der Reise bewegen. Ausserhalb ihres Stadiums liegt eine Karte
+  // hinter der Erde (dort ausgeblendet); kommt man an, schiebt sie sich zur Seite hervor.
   useEffect(() => {
-    const read = () => setActive(Math.min(Math.round(window.scrollY / sectionHeight()), SECTIONS.length - 1));
+    let frame;
+    const tick = () => {
+      const { x, y, r } = journey.screen;
+      cards.current.forEach((card, i) => {
+        const layer = layers.current[i];
+        if (!card || !layer) return;
+        const d = Math.abs(journey.stage - CARDS[i].stage);
+        const out = smoothstep(0.08, 0.5, d); // 0 = an ihrem Platz, 1 = hinter der Erde
+        const visible = out < 0.999;
+        layer.style.visibility = visible ? "visible" : "hidden";
+        if (!visible) return;
+        // Weg vom Platz der Karte zur Erdmitte
+        const box = card.getBoundingClientRect();
+        const cx = box.left - (parseFloat(card.dataset.tx) || 0) + box.width / 2;
+        const cy = box.top - (parseFloat(card.dataset.ty) || 0) + box.height / 2;
+        const tx = (x - cx) * out;
+        const ty = (y - cy) * out;
+        card.dataset.tx = tx;
+        card.dataset.ty = ty;
+        card.style.transform = `translate(${tx}px, ${ty}px) scale(${1 - 0.25 * out})`;
+        card.style.opacity = String(1 - smoothstep(0.6, 1, out));
+        // Teil der Karte hinter der Erdscheibe verdecken; ist die Karte ganz draussen, gibt die Erde sie frei
+        const radius = r * smoothstep(0, 0.35, out);
+        const mask = `radial-gradient(circle at ${x}px ${y}px, transparent ${radius}px, #000 ${radius + 1.5}px)`;
+        layer.style.maskImage = mask;
+        layer.style.webkitMaskImage = mask;
+      });
+      // Leiste erst einblenden, wenn die Reise beginnt
+      if (nav.current) nav.current.style.opacity = String(smoothstep(0.15, 0.6, journey.stage));
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    const read = () => {
+      const stage = Math.round(window.scrollY / sectionHeight());
+      const index = CARDS.findIndex((card) => card.stage === stage);
+      setActive(index);
+    };
     read();
     window.addEventListener("scroll", read, { passive: true });
     return () => window.removeEventListener("scroll", read);
   }, []);
 
-  const go = (i) => window.scrollTo({ top: i * sectionHeight(), behavior: "smooth" });
+  const go = (stage) => window.scrollTo({ top: stage * sectionHeight(), behavior: "smooth" });
 
   return (
     <>
-      <main className="journey">
-        {SECTIONS.map((section, i) => (
-          <section
-            key={section.id}
-            id={section.id}
-            className={`journey-section${i === 0 ? " is-first" : ""}${i === SECTIONS.length - 1 ? " is-last" : ""}`}
-            style={{ "--accent": section.accent }}
-          >
-            {i === 0 && (
-              <header className="hero">
-                <p className="hero-kicker">Geografie</p>
-                <h1 className="hero-title">Eine Reise durch das Schuljahr</h1>
-                <p className="hero-hint">Scrollen, um zu reisen · Ziehen, um die Erde zu drehen</p>
-              </header>
-            )}
-            <article className="card">
-              <p className="card-kicker">{section.kicker}</p>
-              <h2 className="card-title">{section.title}</h2>
-              <p className="card-text">{section.text}</p>
+      {/* Platzhalter für den Scrollweg: ein Abschnitt pro Stadium, der letzte nur bildschirmhoch */}
+      <div className="journey-track" style={{ height: `${(STAGES.length - 1) * SECTION_VH + 100}vh` }} aria-hidden="true" />
+      <div className="cards">
+        {CARDS.map((card, i) => (
+          <div key={card.stage} className="card-layer" ref={(el) => (layers.current[i] = el)}>
+            <article
+              className="card"
+              ref={(el) => (cards.current[i] = el)}
+              style={{ "--accent": card.accent }}
+              aria-hidden={active !== i}
+            >
+              <p className="card-kicker">{card.kicker}</p>
+              <h2 className="card-title">{card.title}</h2>
+              <p className="card-text">{card.text}</p>
             </article>
-          </section>
+          </div>
         ))}
-      </main>
-      <nav className="seasons" aria-label="Stadien">
-        {SECTIONS.map((section, i) => (
+      </div>
+      <nav className="seasons" aria-label="Stadien" ref={nav}>
+        {CARDS.map((card, i) => (
           <button
-            key={section.id}
+            key={card.stage}
             type="button"
             className={`season${i === active ? " is-active" : ""}`}
-            style={{ "--accent": section.accent }}
-            onClick={() => go(i)}
-            aria-label={section.season}
+            style={{ "--accent": card.accent }}
+            onClick={() => go(card.stage)}
+            aria-label={card.title}
             aria-current={i === active ? "step" : undefined}
           >
             <span className="season-symbol" aria-hidden="true">
-              {section.symbol}
+              {card.symbol}
             </span>
-            <span className="season-label">{section.season}</span>
+            <span className="season-label">{card.title}</span>
           </button>
         ))}
       </nav>

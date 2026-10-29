@@ -149,8 +149,8 @@ export default function Balloon({
   useFrame((state, delta) => {
     // Langsam um die Erde, dazu leichtes Wippen
     orbit.current.rotation.y += delta * style.orbitSpeed;
-    // Im Herbst (Stadium 3) ziehen alle Ballone zurück an ihren Platz vor der Erde, damit man sie sieht
-    const autumn = stageWeight(3);
+    // Im Herbst (Stadium 4) ziehen alle Ballone zurück an ihren Platz vor der Erde, damit man sie sieht
+    const autumn = stageWeight(4);
     if (autumn > 0) {
       const r = THREE.MathUtils.euclideanModulo(orbit.current.rotation.y + Math.PI, Math.PI * 2) - Math.PI;
       orbit.current.rotation.y = r - r * Math.min(autumn * delta * 1.5, 1);

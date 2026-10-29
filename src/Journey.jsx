@@ -9,6 +9,7 @@ const Y = new THREE.Vector3(0, 1, 0);
 const tilt = new THREE.Quaternion();
 const yaw = new THREE.Quaternion();
 const point = new THREE.Vector3();
+const center = new THREE.Vector3();
 
 // Kürzester Weg zwischen zwei Winkeln (Grad)
 function lerpAngle(a, b, f) {
@@ -121,6 +122,13 @@ export default function Journey() {
     if (aspect > 1.1) camera.setViewOffset(width, height, -shift * width, 0, width, height);
     else camera.setViewOffset(width, height, 0, Math.abs(shift) * height * 0.6, width, height);
     camera.updateProjectionMatrix();
+
+    // Lage der Erdscheibe auf dem Bildschirm (für die Texte, die hinter ihr hervorkommen)
+    camera.updateMatrixWorld();
+    center.set(0, 0, 0).project(camera);
+    journey.screen.x = (center.x * 0.5 + 0.5) * width;
+    journey.screen.y = (-center.y * 0.5 + 0.5) * height;
+    journey.screen.r = (Math.tan(Math.asin(1 / distance)) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) * (height / 2);
   });
 
   return null;

@@ -82,8 +82,8 @@ export default function Volcano({ label = "Vulkan", size = 0.008 }) {
   const style = useObjectStyle();
   // Sichtbarkeit und Grösse je Stadium der Reise
   const presence = usePresence();
-  // Beim Ankommen im Sommer (Stadium 2) bricht er aus
-  const arrived = useArrival(2);
+  // Beim Ankommen im Sommer (Stadium 3) bricht er aus
+  const arrived = useArrival(3);
   const geometry = useMemo(() => mountainGeometry(), []);
   const site = useMemo(() => {
     const up = latLonToVector(...SITE);

@@ -23,58 +23,38 @@ body {
   z-index: 0;
 }
 
-/* Abschnitte scrollen über die Bühne; nur die Karten fangen Klicks ab, sonst kann man die Erde ziehen */
-.journey {
+/* Scrollweg: unsichtbar, nur damit die Seite scrollt */
+.journey-track {
   position: relative;
   z-index: 1;
   pointer-events: none;
 }
 
-.journey-section {
-  min-height: 170vh;
-  box-sizing: border-box;
-  padding: 26vh 6vw 0;
+/* Karten stehen fest im Bild; jede Ebene ist bildschirmgross, damit die Maske (Erdscheibe) in
+   Bildschirm-Koordinaten liegt. Nur die Karten selbst fangen Klicks ab, sonst kann man die Erde ziehen. */
+.cards {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
 }
 
-.journey-section.is-first {
-  padding-top: 12vh;
-}
-
-.journey-section.is-last {
-  min-height: 100vh;
-}
-
-.hero {
-  max-width: 34rem;
-  margin-bottom: 38vh;
-}
-
-.hero-kicker {
-  margin: 0 0 0.75rem;
-  font-size: 0.85rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-}
-
-.hero-title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-weight: 500;
-  font-size: clamp(2.2rem, 5vw, 4rem);
-  line-height: 1.05;
-  text-wrap: balance;
-}
-
-.hero-hint {
-  margin: 1.25rem 0 0;
-  font-size: 0.95rem;
-  color: var(--ink-soft);
+.card-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 6vw;
+  visibility: hidden;
 }
 
 .card {
   pointer-events: auto;
-  max-width: 26rem;
+  box-sizing: border-box;
+  width: min(26rem, 40vw);
+  max-height: 70vh;
+  overflow: auto;
+  will-change: transform, opacity;
   padding: 1.6rem 1.8rem;
   border: 1px solid var(--panel-border);
   border-radius: 1.25rem;
@@ -115,6 +95,7 @@ body {
   flex-direction: column;
   gap: 0.5rem;
   transform: translateY(-50%);
+  opacity: 0;
 }
 
 .season {
@@ -172,17 +153,13 @@ body {
 
 /* Schmal: Text unten, Erde oben (die Kamera schiebt sie hoch) */
 @media (max-width: 760px) {
-  .journey-section {
-    padding: 58vh 16px 0;
-  }
-  .journey-section.is-first {
-    padding-top: 8vh;
-  }
-  .hero {
-    margin-bottom: 40vh;
+  .card-layer {
+    align-items: flex-end;
+    padding: 0 16px 6vh;
   }
   .card {
-    max-width: none;
+    width: 100%;
+    max-height: 45vh;
     padding: 1.25rem 1.35rem;
   }
   .seasons {

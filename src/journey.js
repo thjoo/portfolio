@@ -68,7 +68,19 @@ export const STAGES = [
     id: "intro",
     view: [22, -38],
     zoom: 1,
-    shift: 0.12,
+    shift: 0,
+    palette: null,
+    ice: [0, 1],
+    sun: [-72, 0.25],
+    focus: ["balloonClassic", "balloonOnion", "shipContainer", "clouds"],
+    others: 0,
+  },
+  {
+    // Wie der Anfang, aber die Erde rückt zur Seite und der Text kommt hinter ihr hervor
+    id: "untergymnasium",
+    view: [22, -30],
+    zoom: 0.92,
+    shift: 0.2,
     palette: null,
     ice: [0, 1],
     sun: [-72, 0.25],
@@ -141,6 +153,7 @@ const HOLD = 0.28;
 export const journey = {
   raw: 0, // Scroll-Position in Stadien (0 … 5), gedämpft
   stage: 0, // mit Ruhezonen: bleibt bei ganzen Zahlen eine Weile stehen
+  screen: { x: 0, y: 0, r: 0 }, // Erde auf dem Bildschirm (Mitte und Radius in CSS-Pixeln)
   arrival: { index: 0, count: 0 }, // zuletzt erreichtes Stadium; count zählt jedes Ankommen
 };
 

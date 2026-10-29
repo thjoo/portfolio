@@ -113,9 +113,9 @@ export default function Meteor() {
   const headMaterial = useRef();
   const trail = useRef();
   const sparks = useRef();
-  // Nur im Winter (Stadium 4) unterwegs; beim Ankommen fällt er sofort
+  // Nur im Winter (Stadium 5) unterwegs; beim Ankommen fällt er sofort
   const presence = usePresence();
-  const arrived = useArrival(4);
+  const arrived = useArrival(5);
   const state = useRef({
     phase: "wait",
     time: 8,

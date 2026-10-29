@@ -120,8 +120,8 @@ export default function Rocket({ label = "Rakete", size = 0.06 }) {
   const style = useObjectStyle();
   // Sichtbarkeit und Grösse je Stadium der Reise
   const presence = usePresence();
-  // Beim Ankommen im Frühling (Stadium 1) sofort zünden
-  const arrived = useArrival(1);
+  // Beim Ankommen im Frühling (Stadium 2) sofort zünden
+  const arrived = useArrival(2);
 
   // Rauchwolken in Erd-Koordinaten (Kind des Rahmens, dreht mit)
   const smoke = useMemo(() => new SmokePool(900), []);
