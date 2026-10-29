@@ -34,6 +34,7 @@ const vertexShader = /* glsl */ `
   varying float vSeed;
   varying float vBolt;
   varying vec3 vCenter;
+  varying float vVisible;
   void main() {
     // Mittelpunkt und Grösse aus der Instanzmatrix, Ausrichtung zur Kamera (Billboard)
     vec4 center = modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
@@ -47,6 +48,15 @@ const vertexShader = /* glsl */ `
     vBolt = aBolt;
     vCenter = center.xyz;
     gl_Position = projectionMatrix * viewMatrix * vec4(world, 1.0);
+    // Ganze Wolke mit der Tiefe ihres Mittelpunkts zeichnen: wie ein aufgeklebtes Bild, das nicht
+    // in die Kugel schneidet
+    vec4 clipCenter = projectionMatrix * viewMatrix * center;
+    gl_Position.z = (clipCenter.z / clipCenter.w) * gl_Position.w;
+    // Hinter dem Erdrand weich ausblenden (Sichtlinie Kamera -> Mittelpunkt streift die Kugel)
+    vec3 toCenter = center.xyz - cameraPosition;
+    float t = clamp(-dot(cameraPosition, toCenter) / dot(toCenter, toCenter), 0.0, 1.0);
+    float closest = length(cameraPosition + toCenter * t);
+    vVisible = t >= 1.0 ? 1.0 : smoothstep(0.98, 1.04, closest);
   }
 `;
 
@@ -59,6 +69,7 @@ const fragmentShader = /* glsl */ `
   varying float vSeed;
   varying float vBolt;
   varying vec3 vCenter;
+  varying float vVisible;
   ${noise}
   ${sunlight}
 
@@ -121,9 +132,9 @@ const fragmentShader = /* glsl */ `
     return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0));
   }
   float bolt(vec2 p) {
-    float d = segment(p, vec2(0.08, -0.3), vec2(-0.06, -0.42));
-    d = min(d, segment(p, vec2(-0.06, -0.42), vec2(0.06, -0.45)));
-    d = min(d, segment(p, vec2(0.06, -0.45), vec2(-0.05, -0.6)));
+    float d = segment(p, vec2(0.1, -0.28), vec2(-0.08, -0.47));
+    d = min(d, segment(p, vec2(-0.08, -0.47), vec2(0.08, -0.52)));
+    d = min(d, segment(p, vec2(0.08, -0.52), vec2(-0.07, -0.78)));
     return d;
   }
 
@@ -174,15 +185,25 @@ const fragmentShader = /* glsl */ `
       float cover = max(max(a, b), cArc);
       alpha = shape * mix(0.8, 1.0, cover);
     }
+    float glowLight = 0.0;
     if (vBolt > 0.5) {
-      // Blitz zuckt ab und zu auf
-      float flash = step(0.82, fract(sin(floor(uTime * 2.5) * 12.9898) * 43758.5453));
-      float b = (1.0 - smoothstep(0.012, 0.03, bolt(p))) * step(p.y, -0.29) * flash;
-      color = mix(color, vec3(1.0, 0.97, 0.78), b);
-      alpha = max(alpha, b);
+      // Blitz zuckt schnell und oft, manchmal doppelt; mit hellem Schein und aufleuchtender Wolke
+      float tick = floor(uTime * 9.0);
+      float flash = step(0.55, fract(sin(tick * 12.9898) * 43758.5453))
+                  * (0.7 + 0.3 * fract(sin(tick * 78.233) * 43758.5453));
+      float dist = bolt(p);
+      float core = (1.0 - smoothstep(0.02, 0.045, dist)) * step(p.y, -0.28);
+      float halo = exp(-dist * 22.0) * step(p.y, -0.2) * 0.8;
+      color *= 1.0 + flash * 0.35 * shape;
+      color = mix(color, vec3(1.0, 0.92, 0.55), halo * flash);
+      color = mix(color, vec3(1.0, 1.0, 0.92), core * flash);
+      alpha = max(alpha, max(core, halo * 0.75) * flash);
+      glowLight = flash * (core + halo);
     }
+    alpha *= vVisible;
     if (alpha < 0.05) discard;
-    gl_FragColor = vec4(color * light, alpha);
+    // Blitz leuchtet selbst, auch im Erdschatten
+    gl_FragColor = vec4(color * mix(light, 1.0, clamp(glowLight, 0.0, 1.0)), alpha);
     #include <colorspace_fragment>
   }
 `;
@@ -201,8 +222,8 @@ export default function Clouds() {
 
   // Fläche etwas breiter als hoch; unten Platz für den Blitz
   const geometry = useMemo(() => {
-    const g = new THREE.PlaneGeometry(2, 1.3);
-    g.translate(0, -0.03, 0);
+    const g = new THREE.PlaneGeometry(2, 1.55);
+    g.translate(0, -0.155, 0);
     const colors = new Float32Array(CLOUDS.length * 3);
     const color = new THREE.Color();
     CLOUDS.forEach(([, , , hex], i) => color.set(hex).toArray(colors, i * 3));
